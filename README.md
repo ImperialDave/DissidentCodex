@@ -1,0 +1,2 @@
+# DissidentCodex
+forum vibecoding project
