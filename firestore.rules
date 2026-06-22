@@ -1,0 +1,555 @@
+rules_version = '2';
+// =============================================================================
+// CODEX FIRESTORE RULES  v2026-06-22
+// CANONICAL FILE (open this one): ~/AndroidStudioProjects/Codex/firestore.rules
+// NOT the .grok/worktrees/... copy — that is a separate sandbox and is NOT what you paste.
+// Paste the ENTIRE file into Firebase Console → Firestore → Rules → Publish.
+// After pasting, search the editor for "v2026-06-22" — if missing, paste failed.
+//
+// v2026-06-22: fix mod post hide (no canPostContent gate), comment video, web App Check,
+//              DM/topic room existence checks for web SDK.
+// =============================================================================
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // App Check: enforced after 2026-08-01; register debug token for dev builds.
+    function isCodexApp() {
+      return request.app != null && (
+        request.app.appId == '1:977568853771:android:e669524f5a5cb9296cbc0e' ||
+        request.app.appId.matches('1:977568853771:web:.*')
+      );
+    }
+
+    function hasValidAppCheck() {
+      return isCodexApp();
+    }
+
+    function secureClient() {
+      return request.auth != null &&
+        (hasValidAppCheck() || request.time < timestamp.date(2026, 8, 1));
+    }
+
+    function hasUserDoc() {
+      return secureClient() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function userRole() {
+      return hasUserDoc() ? userDoc().role : 'USER';
+    }
+
+    function isFounderEmail() {
+      return secureClient() &&
+        request.auth.token.email != null &&
+        request.auth.token.email.lower() == 'ericdanielevans@gmail.com';
+    }
+
+    function isModerator() {
+      return secureClient() && (
+        (hasUserDoc() && userDoc().role in ['ADMIN', 'MOD', 'FOUNDER']) ||
+        isFounderEmail()
+      );
+    }
+
+    function canPostContent() {
+      return hasUserDoc() && userDoc().role in ['ADMIN', 'MOD', 'FOUNDER', 'USER']
+        || isFounderEmail();
+    }
+
+    function isProtectedFounder(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data.email.lower()
+        == 'ericdanielevans@gmail.com';
+    }
+
+    function isRoomWritable(room) {
+      return room.type == 'dm' ||
+        (room.type == 'topic' && (
+          !('locked' in room) || room.locked != true || isModerator()
+        ));
+    }
+
+    // DM doc IDs are dm_{uidA}_{uidB} (sorted). Allow access when memberIds is stale/missing.
+    function isDmParticipantByRoomId(roomId) {
+      return roomId.matches('dm_' + request.auth.uid + '_.+') ||
+        roomId.matches('dm_.+_' + request.auth.uid);
+    }
+
+    function canAccessChatRoom(room) {
+      return room.type == 'topic' ||
+        (room.type == 'dm' && (
+          request.auth.uid in room.memberIds ||
+          room.createdBy == request.auth.uid
+        ));
+    }
+
+    // Allow get() on missing docs for known room id patterns so clients can
+    // check existence before create (web SDK denies read when resource is null).
+    function isTopicRoomId(roomId) {
+      return roomId.matches('topic_.+');
+    }
+
+    function canReadChatRoom(roomId, room) {
+      return (resource == null && (isTopicRoomId(roomId) || isDmParticipantByRoomId(roomId))) ||
+        canAccessChatRoom(room) ||
+        (room.type == 'dm' && isDmParticipantByRoomId(roomId));
+    }
+
+    function chatRoomExists(roomId) {
+      return exists(/databases/$(database)/documents/chatRooms/$(roomId));
+    }
+
+    function chatRoomData(roomId) {
+      return get(/databases/$(database)/documents/chatRooms/$(roomId)).data;
+    }
+
+    function canReadChatMessages(roomId) {
+      return chatRoomExists(roomId) &&
+        canReadChatRoom(roomId, chatRoomData(roomId));
+    }
+
+    function isGifUrl(text) {
+      return text.matches('.*\\.gif.*') ||
+        text.matches('.*giphy\\.com.*') ||
+        text.matches('.*tenor\\.com.*');
+    }
+
+    function validChatMessageText(text) {
+      return text is string &&
+        text.size() <= 1000 &&
+        !isGifUrl(text);
+    }
+
+    function validChatMediaFields(data) {
+      return optionalStringField(data, 'imageUrl') &&
+        optionalStringField(data, 'mediaType') &&
+        (!('mediaType' in data) || data.mediaType == null ||
+          data.mediaType in ['IMAGE', 'GIF', 'VIDEO', 'image', 'gif', 'video']);
+    }
+
+    function validChatMessageCreate() {
+      let data = request.resource.data;
+      return data.authorId == request.auth.uid &&
+        validAuthorRoleForWrite() &&
+        validChatMessageText(data.text) &&
+        validChatMediaFields(data) &&
+        (
+          (data.text is string && data.text.size() >= 1) ||
+          ('imageUrl' in data && data.imageUrl is string && data.imageUrl.size() >= 1)
+        );
+    }
+
+    function validAuthorRoleForWrite() {
+      return request.resource.data.authorRole == userRole() ||
+        (isFounderEmail() && request.resource.data.authorRole == 'FOUNDER');
+    }
+
+    function optionalStringField(data, field) {
+      return !(field in data) || data[field] == null || data[field] is string;
+    }
+
+    function validMediaFields(data) {
+      return optionalStringField(data, 'imageUrl') &&
+        optionalStringField(data, 'mediaType') &&
+        (!('mediaType' in data) || data.mediaType == null ||
+          data.mediaType in ['IMAGE', 'GIF', 'image', 'gif']);
+    }
+
+    function validCommentMediaFields(data) {
+      return optionalStringField(data, 'imageUrl') &&
+        optionalStringField(data, 'mediaType') &&
+        (!('mediaType' in data) || data.mediaType == null ||
+          data.mediaType in ['IMAGE', 'GIF', 'VIDEO', 'image', 'gif', 'video']);
+    }
+
+    function validPostCreate() {
+      let data = request.resource.data;
+      return data.authorId == request.auth.uid &&
+        validAuthorRoleForWrite() &&
+        data.authorName is string &&
+        data.authorName.size() >= 1 &&
+        data.authorName.size() <= 50 &&
+        data.title is string &&
+        data.title.size() >= 1 &&
+        data.title.size() <= 120 &&
+        data.body is string &&
+        data.body.size() >= 1 &&
+        data.body.size() <= 4000 &&
+        data.category is string &&
+        data.category.size() >= 1 &&
+        data.category.size() <= 40 &&
+        data.likeCount == 0 &&
+        data.commentCount == 0 &&
+        validMediaFields(data);
+    }
+
+    function validCommentCreate() {
+      let data = request.resource.data;
+      return data.authorId == request.auth.uid &&
+        validAuthorRoleForWrite() &&
+        data.authorName is string &&
+        data.authorName.size() >= 1 &&
+        data.authorName.size() <= 50 &&
+        data.postId is string &&
+        data.postId.size() >= 1 &&
+        data.text is string &&
+        data.text.size() <= 1000 &&
+        (data.text.size() >= 1 || ('imageUrl' in data && data.imageUrl is string && data.imageUrl.size() >= 1)) &&
+        validCommentMediaFields(data) &&
+        (!('parentCommentId' in data) || data.parentCommentId == null ||
+          (data.parentCommentId is string &&
+            data.parentCommentId.size() >= 1 &&
+            get(/databases/$(database)/documents/comments/$(data.parentCommentId)).data.postId == data.postId)) &&
+        optionalStringField(data, 'replyToAuthorName') &&
+        (!('likeCount' in data) || data.likeCount == 0);
+    }
+
+    function userLikedPost(postId) {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)/likedPosts/$(postId));
+    }
+
+    function userLikedComment(commentId) {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)/likedComments/$(commentId));
+    }
+
+    // Mods/founders can hide posts from the main feed (hiddenFromFeed) or unhide them.
+    function validPostFeedHideUpdate() {
+      let diff = request.resource.data.diff(resource.data).affectedKeys();
+      let allowed = ['hiddenFromFeed', 'hiddenBy', 'hiddenAt', 'updatedAt'];
+      return isModerator() &&
+        diff.hasOnly(allowed) &&
+        request.resource.data.hiddenFromFeed is bool &&
+        (
+          (request.resource.data.hiddenFromFeed == true &&
+            request.resource.data.hiddenBy == request.auth.uid &&
+            request.resource.data.hiddenAt is timestamp) ||
+          request.resource.data.hiddenFromFeed == false
+        );
+    }
+
+    function validPostCounterUpdate(postId) {
+      let diff = request.resource.data.diff(resource.data).affectedKeys();
+      return diff.hasOnly(['likeCount', 'commentCount', 'updatedAt']) &&
+        (!diff.hasAny(['likeCount']) ||
+          (userLikedPost(postId) &&
+            request.resource.data.likeCount is int &&
+            request.resource.data.likeCount >= 0 &&
+            (
+              request.resource.data.likeCount == resource.data.likeCount + 1 ||
+              (request.resource.data.likeCount == resource.data.likeCount - 1 && resource.data.likeCount > 0)
+            ))) &&
+        (!diff.hasAny(['commentCount']) ||
+          (request.resource.data.commentCount is int &&
+            request.resource.data.commentCount >= resource.data.commentCount - 1 &&
+            request.resource.data.commentCount <= resource.data.commentCount + 1));
+    }
+
+    function validCommentLikeUpdate(commentId) {
+      let diff = request.resource.data.diff(resource.data).affectedKeys();
+      return diff.hasOnly(['likeCount']) &&
+        userLikedComment(commentId) &&
+        request.resource.data.likeCount is int &&
+        request.resource.data.likeCount >= 0 &&
+        (
+          request.resource.data.likeCount == resource.data.likeCount + 1 ||
+          (request.resource.data.likeCount == resource.data.likeCount - 1 && resource.data.likeCount > 0)
+        );
+    }
+
+    function validFriendDocFields(friendUid) {
+      let data = request.resource.data;
+      return data.uid == friendUid &&
+        data.displayName is string &&
+        data.displayName.size() >= 1 &&
+        data.displayName.size() <= 50 &&
+        optionalStringField(data, 'photoUrl');
+    }
+
+    function validFriendDocUpdate(friendUid) {
+      return validFriendDocFields(friendUid) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'uid', 'displayName', 'photoUrl', 'since'
+        ]);
+    }
+
+    function validProfileSelfUpdate() {
+      let diff = request.resource.data.diff(resource.data).affectedKeys();
+      return diff.hasOnly(['displayName', 'bio', 'photoUrl', 'backgroundUrl', 'flair', 'lastActive']) &&
+        request.resource.data.displayName is string &&
+        request.resource.data.displayName.size() >= 1 &&
+        request.resource.data.displayName.size() <= 50 &&
+        request.resource.data.bio is string &&
+        request.resource.data.bio.size() <= 300 &&
+        optionalStringField(request.resource.data, 'photoUrl') &&
+        optionalStringField(request.resource.data, 'backgroundUrl') &&
+        optionalStringField(request.resource.data, 'flair') &&
+        (!('flair' in request.resource.data) || request.resource.data.flair == null ||
+          request.resource.data.flair.size() <= 40);
+    }
+
+    match /users/{userId} {
+      allow read: if secureClient();
+
+      match /favoriteChats/{roomId} {
+        allow read, write: if secureClient() && request.auth.uid == userId;
+      }
+
+      match /likedPosts/{postId} {
+        allow read: if secureClient() && request.auth.uid == userId;
+        allow create: if secureClient() && request.auth.uid == userId &&
+          canPostContent() &&
+          request.resource.data.keys().hasOnly(['likedAt']);
+        allow delete: if secureClient() && request.auth.uid == userId;
+      }
+
+      match /likedComments/{commentId} {
+        allow read: if secureClient() && request.auth.uid == userId;
+        allow create: if secureClient() && request.auth.uid == userId &&
+          canPostContent() &&
+          request.resource.data.keys().hasOnly(['likedAt']);
+        allow delete: if secureClient() && request.auth.uid == userId;
+      }
+
+      match /friends/{friendUid} {
+        allow read: if secureClient();
+        allow create: if secureClient() && (
+          (request.auth.uid == userId && validFriendDocFields(friendUid)) ||
+          (request.auth.uid == friendUid && validFriendDocFields(friendUid))
+        );
+        allow update: if secureClient() && (
+          (request.auth.uid == userId && validFriendDocUpdate(friendUid)) ||
+          (request.auth.uid == friendUid && validFriendDocUpdate(friendUid))
+        );
+        allow delete: if secureClient() && (
+          request.auth.uid == userId ||
+          request.auth.uid == friendUid ||
+          isModerator()
+        );
+      }
+
+      match /favoriteCategories/{categoryId} {
+        allow read: if secureClient();
+        allow write: if secureClient() && request.auth.uid == userId;
+      }
+
+      match /notifications/{notifId} {
+        allow read: if secureClient() && request.auth.uid == userId;
+        allow update: if secureClient() && request.auth.uid == userId &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']) &&
+          request.resource.data.read is bool;
+        allow delete: if secureClient() && request.auth.uid == userId;
+        allow create: if false;
+      }
+      allow create: if secureClient() && request.auth.uid == userId && (
+        request.resource.data.role == 'USER' ||
+        (isFounderEmail() && request.resource.data.role == 'FOUNDER')
+      );
+      allow update: if secureClient() && (
+        (request.auth.uid == userId && isFounderEmail() &&
+          request.resource.data.role == 'FOUNDER') ||
+        (request.auth.uid == userId && validProfileSelfUpdate()) ||
+        (isModerator() &&
+          !(isProtectedFounder(userId) && request.resource.data.role != 'FOUNDER') &&
+          (request.resource.data.role == resource.data.role ||
+            request.resource.data.role != 'ADMIN' ||
+            userRole() in ['ADMIN', 'FOUNDER'] ||
+            isFounderEmail()) &&
+          (request.resource.data.role != 'FOUNDER' || isFounderEmail()))
+      );
+    }
+
+    match /categories/{categoryId} {
+      allow read: if secureClient();
+      allow create: if secureClient() &&
+        request.resource.data.createdBy == request.auth.uid &&
+        request.resource.data.name is string &&
+        request.resource.data.name.size() >= 2 &&
+        request.resource.data.name.size() <= 40 &&
+        request.resource.data.normalizedName is string;
+      allow delete: if secureClient() && (
+        resource.data.createdBy == request.auth.uid ||
+        isModerator()
+      );
+    }
+
+    match /friendRequests/{requestId} {
+      allow read: if secureClient() && (
+        resource.data.fromUid == request.auth.uid ||
+        resource.data.toUid == request.auth.uid
+      );
+      allow create: if secureClient() &&
+        request.resource.data.fromUid == request.auth.uid &&
+        request.resource.data.toUid != request.auth.uid &&
+        request.resource.data.status == 'pending';
+      allow update: if secureClient() && (
+        (resource.data.toUid == request.auth.uid &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) &&
+          request.resource.data.status in ['accepted', 'declined']) ||
+        (resource.data.fromUid == request.auth.uid &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) &&
+          request.resource.data.status == 'declined')
+      );
+    }
+
+    match /hiddenTopics/{topicKey} {
+      allow read: if secureClient();
+      allow write, delete: if isModerator();
+    }
+
+    match /posts/{postId} {
+      allow read: if secureClient();
+      allow create: if secureClient() &&
+        canPostContent() &&
+        validPostCreate();
+      // v2026-06-22: likes/comments OR mod feed hide (hide skips canPostContent)
+      allow update: if secureClient() && (
+        (canPostContent() && validPostCounterUpdate(postId)) ||
+        validPostFeedHideUpdate()
+      );
+      allow delete: if secureClient() &&
+        (resource.data.authorId == request.auth.uid || isModerator());
+    }
+
+    match /comments/{commentId} {
+      allow read: if secureClient();
+      allow create: if secureClient() &&
+        canPostContent() &&
+        validCommentCreate();
+      allow update: if secureClient() &&
+        canPostContent() &&
+        validCommentLikeUpdate(commentId);
+      allow delete: if secureClient() && (
+        resource.data.authorId == request.auth.uid ||
+        isModerator() ||
+        get(/databases/$(database)/documents/posts/$(resource.data.postId)).data.authorId == request.auth.uid
+      );
+    }
+
+    function validChatRoomCreate() {
+      return request.resource.data.createdBy == request.auth.uid &&
+        request.resource.data.title is string &&
+        request.resource.data.title.size() >= 1 &&
+        request.resource.data.title.size() <= 80 &&
+        (
+          (request.resource.data.type == 'topic' &&
+            request.resource.data.topicId is string &&
+            request.resource.data.topicId.size() >= 1) ||
+          (request.resource.data.type == 'dm' &&
+            request.resource.data.memberIds.size() == 2 &&
+            request.auth.uid in request.resource.data.memberIds)
+        );
+    }
+
+    function areFriends(uidA, uidB) {
+      return exists(/databases/$(database)/documents/users/$(uidA)/friends/$(uidB)) &&
+        exists(/databases/$(database)/documents/users/$(uidB)/friends/$(uidA));
+    }
+
+    function isChessPlayer(data) {
+      return request.auth.uid == data.whiteUid || request.auth.uid == data.blackUid;
+    }
+
+    function canReadChessGame(gameId) {
+      return resource == null ||
+        (resource.data.keys().hasAll(['playerUids']) &&
+          request.auth.uid in resource.data.playerUids) ||
+        (resource.data.keys().hasAll(['whiteUid', 'blackUid']) && isChessPlayer(resource.data));
+    }
+
+    function validChessCreate() {
+      let data = request.resource.data;
+      return data.whiteUid is string &&
+        data.blackUid is string &&
+        data.whiteUid != data.blackUid &&
+        (!('playerUids' in data) ||
+          (data.playerUids is list &&
+            data.playerUids.size() == 2 &&
+            request.auth.uid in data.playerUids)) &&
+        data.challengerUid == request.auth.uid &&
+        (request.auth.uid == data.whiteUid || request.auth.uid == data.blackUid) &&
+        data.status in ['active', 'pending'] &&
+        data.fen is string &&
+        data.fen.size() >= 15 &&
+        data.fen.size() <= 120 &&
+        data.turn in ['w', 'b'];
+    }
+
+    function validChessUpdate() {
+      let data = request.resource.data;
+      let prev = resource.data;
+      return isChessPlayer(prev) &&
+        data.whiteUid == prev.whiteUid &&
+        data.blackUid == prev.blackUid &&
+        (!('playerUids' in data) ||
+          (data.playerUids is list &&
+            data.playerUids.size() == 2 &&
+            data.playerUids.hasAll([prev.whiteUid, prev.blackUid]))) &&
+        data.fen is string &&
+        data.fen.size() >= 15 &&
+        data.fen.size() <= 120 &&
+        data.turn in ['w', 'b'] &&
+        (
+          (prev.status == 'pending' &&
+            request.auth.uid in [prev.whiteUid, prev.blackUid] &&
+            data.status in ['active', 'declined']) ||
+          (prev.status in ['finished', 'declined'] &&
+            data.status == 'active' &&
+            data.challengerUid == request.auth.uid) ||
+          (prev.status == 'active' &&
+            data.status == 'finished' &&
+            data.result == 'resign' &&
+            data.winnerUid != request.auth.uid &&
+            (data.winnerUid == prev.whiteUid || data.winnerUid == prev.blackUid)) ||
+          (prev.status == 'active' &&
+            data.status in ['active', 'finished'] &&
+            (
+              (prev.turn == 'w' && prev.whiteUid == request.auth.uid) ||
+              (prev.turn == 'b' && prev.blackUid == request.auth.uid)
+            ))
+        );
+    }
+
+    match /chessGames/{gameId} {
+      allow read: if secureClient() && canReadChessGame(gameId);
+      allow create: if secureClient() && validChessCreate();
+      allow update: if secureClient() && validChessUpdate();
+      allow delete: if false;
+    }
+
+    match /chatRooms/{roomId} {
+      allow read: if secureClient() && canReadChatRoom(roomId, resource.data);
+      allow create: if secureClient() && validChatRoomCreate();
+      allow update: if secureClient() && (
+        (isModerator() && resource.data.type == 'topic' &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'locked', 'lockedBy', 'lockedAt',
+            'lastMessageAt', 'lastMessagePreview', 'lastMessageAuthorId', 'messageCount'
+          ])) ||
+        (resource.data.type == 'dm' &&
+          isDmParticipantByRoomId(roomId) &&
+          request.auth.uid in request.resource.data.memberIds &&
+          request.resource.data.memberIds.size() == 2 &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberIds'])) ||
+        (canReadChatRoom(roomId, resource.data) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'lastMessageAt', 'lastMessagePreview', 'lastMessageAuthorId', 'messageCount'
+          ]))
+      );
+      allow delete: if isModerator();
+
+      match /messages/{messageId} {
+        allow read: if secureClient() && canReadChatMessages(roomId);
+        allow create: if secureClient() &&
+          canPostContent() &&
+          validChatMessageCreate() &&
+          canReadChatMessages(roomId) &&
+          isRoomWritable(chatRoomData(roomId));
+        allow delete: if secureClient() && (
+          resource.data.authorId == request.auth.uid || isModerator()
+        );
+      }
+    }
+  }
+}
