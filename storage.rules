@@ -1,0 +1,72 @@
+rules_version = '2';
+// CODEX STORAGE RULES v2026-06-22 — includes comment_media/ for comment videos
+service firebase.storage {
+  match /b/{bucket}/o {
+    function secureClient() {
+      return request.auth != null &&
+        (hasValidAppCheck() || request.time < timestamp.date(2026, 8, 1));
+    }
+
+    function isCodexApp() {
+      return request.app != null && (
+        request.app.appId == '1:977568853771:android:e669524f5a5cb9296cbc0e' ||
+        request.app.appId.matches('1:977568853771:web:.*')
+      );
+    }
+
+    function hasValidAppCheck() {
+      return isCodexApp();
+    }
+
+    function isOwner(uid) {
+      return secureClient() && request.auth.uid == uid;
+    }
+
+    function isValidImageUpload() {
+      return request.resource.size < 10 * 1024 * 1024 &&
+        request.resource.contentType.matches('image/.*');
+    }
+
+    function isValidChatVideoUpload() {
+      return request.resource.size < 50 * 1024 * 1024 &&
+        request.resource.contentType.matches('video/.*');
+    }
+
+    match /post_images/{uid}/{allPaths=**} {
+      allow read: if secureClient();
+      allow write: if isOwner(uid) && isValidImageUpload();
+    }
+    match /profile_pics/{uid}/{allPaths=**} {
+      allow read: if secureClient();
+      allow write: if isOwner(uid) && isValidImageUpload();
+    }
+    match /profile_backgrounds/{uid}/{allPaths=**} {
+      allow read: if secureClient();
+      allow write: if isOwner(uid) && isValidImageUpload();
+    }
+    match /comment_images/{uid}/{allPaths=**} {
+      allow read: if secureClient();
+      allow write: if isOwner(uid) && isValidImageUpload();
+    }
+    match /comment_media/{uid}/{allPaths=**} {
+      allow read: if secureClient();
+      allow write: if isOwner(uid) && (
+        isValidImageUpload() || isValidChatVideoUpload()
+      );
+    }
+    match /giphy_cache/{uid}/{allPaths=**} {
+      allow read: if secureClient();
+      allow write: if isOwner(uid) && isValidImageUpload();
+    }
+    match /images/{uid}/{allPaths=**} {
+      allow read: if secureClient();
+      allow write: if isOwner(uid) && isValidImageUpload();
+    }
+    match /chat_media/{uid}/{allPaths=**} {
+      allow read: if secureClient();
+      allow write: if isOwner(uid) && (
+        isValidImageUpload() || isValidChatVideoUpload()
+      );
+    }
+  }
+}
