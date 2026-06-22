@@ -1,0 +1,36 @@
+# Gradle
+.gradle/
+build/
+local.properties
+*.iml
+
+# IDE
+.idea/
+*.swp
+*~
+
+# Firebase
+app/google-services.json
+.config/
+.firebase-token.local
+.firebase-service-account.json
+firebase-debug.log
+firebase-debug.*.log
+
+# Misc
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Web (codex-web has its own repo)
+codex-web/node_modules/
+codex-web/.next/
+codex-web/.env*
+
+# Cloud Functions
+functions/node_modules/
+
+# Logs & secrets
+*.log
+.env.local
+.env.production
