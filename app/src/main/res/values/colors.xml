@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Shared semantic colors (roles, status — theme-independent) -->
+    <color name="error">#EF4444</color>
+    <color name="warning">#F59E0B</color>
+    <color name="success">#10B981</color>
+    <color name="admin_gold">#FBBF24</color>
+    <color name="mod_blue">#3B82F6</color>
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+
+    <!-- Midnight (default) -->
+    <color name="midnight_primary">#0F172A</color>
+    <color name="midnight_primary_dark">#020617</color>
+    <color name="midnight_surface">#1E2937</color>
+    <color name="midnight_surface_variant">#334155</color>
+    <color name="midnight_on_surface">#E2E8F0</color>
+    <color name="midnight_on_surface_variant">#94A3B8</color>
+    <color name="midnight_accent">#14B8A6</color>
+    <color name="midnight_accent_light">#5EEAD4</color>
+
+    <!-- Ocean -->
+    <color name="ocean_primary">#0B1B2B</color>
+    <color name="ocean_primary_dark">#061018</color>
+    <color name="ocean_surface">#132F4C</color>
+    <color name="ocean_surface_variant">#1E4976</color>
+    <color name="ocean_on_surface">#E3F2FD</color>
+    <color name="ocean_on_surface_variant">#90CAF9</color>
+    <color name="ocean_accent">#29B6F6</color>
+    <color name="ocean_accent_light">#81D4FA</color>
+
+    <!-- Ember -->
+    <color name="ember_primary">#1A0F0F</color>
+    <color name="ember_primary_dark">#0D0707</color>
+    <color name="ember_surface">#2D1B1B</color>
+    <color name="ember_surface_variant">#4A2C2C</color>
+    <color name="ember_on_surface">#FEE2E2</color>
+    <color name="ember_on_surface_variant">#FCA5A5</color>
+    <color name="ember_accent">#F97316</color>
+    <color name="ember_accent_light">#FDBA74</color>
+
+    <!-- Forest -->
+    <color name="forest_primary">#0B1A12</color>
+    <color name="forest_primary_dark">#050D08</color>
+    <color name="forest_surface">#1A2E23</color>
+    <color name="forest_surface_variant">#2D4A3A</color>
+    <color name="forest_on_surface">#DCFCE7</color>
+    <color name="forest_on_surface_variant">#86EFAC</color>
+    <color name="forest_accent">#22C55E</color>
+    <color name="forest_accent_light">#4ADE80</color>
+
+    <!-- Aurora -->
+    <color name="aurora_primary">#120B1F</color>
+    <color name="aurora_primary_dark">#08040F</color>
+    <color name="aurora_surface">#231535</color>
+    <color name="aurora_surface_variant">#3B2558</color>
+    <color name="aurora_on_surface">#F3E8FF</color>
+    <color name="aurora_on_surface_variant">#C4B5FD</color>
+    <color name="aurora_accent">#A855F7</color>
+    <color name="aurora_accent_light">#D8B4FE</color>
+
+    <!-- Legacy aliases (default midnight — layouts migrating to ?attr) -->
+    <color name="primary">@color/midnight_primary</color>
+    <color name="primary_dark">@color/midnight_primary_dark</color>
+    <color name="surface">@color/midnight_surface</color>
+    <color name="surface_variant">@color/midnight_surface_variant</color>
+    <color name="on_primary">#F8FAFC</color>
+    <color name="on_surface">@color/midnight_on_surface</color>
+    <color name="on_surface_variant">@color/midnight_on_surface_variant</color>
+    <color name="accent">@color/midnight_accent</color>
+    <color name="accent_light">@color/midnight_accent_light</color>
+</resources>

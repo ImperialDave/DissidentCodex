@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/action_manage_topics"
+        android:icon="@drawable/ic_shield_mod"
+        android:title="@string/manage_topics_categories"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_mod_tools"
+        android:title="@string/mod_tools"
+        android:icon="@drawable/ic_profile"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_founder_tools"
+        android:title="@string/founder_tools"
+        android:icon="@drawable/ic_profile"
+        app:showAsAction="never" />
+</menu>
