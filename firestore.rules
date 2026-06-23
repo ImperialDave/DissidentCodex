@@ -398,6 +398,11 @@ service cloud.firestore {
       allow write, delete: if isModerator();
     }
 
+    match /feedHiddenTopics/{topicKey} {
+      allow read: if secureClient();
+      allow write, delete: if isModerator();
+    }
+
     match /posts/{postId} {
       allow read: if secureClient();
       allow create: if secureClient() &&
