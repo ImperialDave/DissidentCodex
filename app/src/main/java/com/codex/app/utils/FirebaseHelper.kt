@@ -4,6 +4,7 @@ import android.net.Uri
 import android.util.Log
 import com.codex.app.CodexApplication
 import com.codex.app.models.BannedTopic
+import com.codex.app.models.FeedHiddenTopic
 import com.codex.app.models.ChatMessage
 import com.codex.app.models.ChatRoom
 import com.codex.app.models.Comment
@@ -48,6 +49,7 @@ object FirebaseHelper {
     private const val FRIENDS = "friends"
     private const val FRIEND_REQUESTS = "friendRequests"
     private const val HIDDEN_TOPICS = "hiddenTopics"
+    private const val FEED_HIDDEN_TOPICS = "feedHiddenTopics"
     private const val LIKED_POSTS = "likedPosts"
     private const val LIKED_COMMENTS = "likedComments"
     private const val MAX_CATEGORY = 40
@@ -671,8 +673,80 @@ object FirebaseHelper {
 
     suspend fun getCategoryNames(): List<String> = getCategories().map { it.name }
 
-    private fun normalizeHiddenTopicKey(name: String): String =
-        name.trim().lowercase().replace(Regex("[^a-z0-9]+"), "_").trim('_')
+    private suspend fun collectTopicNames(): MutableSet<String> {
+        val names = getCategoryNames().toMutableSet()
+        try {
+            val posts = db.collection(POSTS).limit(200).get().await()
+            posts.documents.forEach { doc ->
+                doc.getString("category")?.takeIf { it.isNotBlank() }?.let { names.add(it) }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "collectTopicNames post scan failed", e)
+        }
+        return names
+    }
+
+    suspend fun getAllTopicNames(): List<String> =
+        collectTopicNames().sorted()
+
+    suspend fun getFeedHiddenTopics(): List<FeedHiddenTopic> {
+        return try {
+            val snap = db.collection(FEED_HIDDEN_TOPICS).limit(200).get().await()
+            snap.documents.mapNotNull { doc ->
+                doc.toObject(FeedHiddenTopic::class.java)?.copy(id = doc.id)
+            }.sortedByDescending { it.hiddenAt?.seconds ?: 0L }
+        } catch (e: Exception) {
+            Log.e(TAG, "getFeedHiddenTopics error", e)
+            emptyList()
+        }
+    }
+
+    suspend fun getFeedHiddenTopicNames(): Set<String> =
+        getFeedHiddenTopics().mapNotNull { it.name.takeIf { n -> n.isNotBlank() }?.lowercase() }.toSet()
+
+    suspend fun hideTopicFromBrowse(name: String): Result<Unit> {
+        if (!resolveRole(currentUser).canModerate()) {
+            return Result.failure(Exception("No permission to hide topics."))
+        }
+        val trimmed = name.trim()
+        if (trimmed.isBlank() || trimmed == ALL_CATEGORY_LABEL) {
+            return Result.failure(Exception("Cannot hide this topic."))
+        }
+        val uid = auth.currentUser?.uid ?: return Result.failure(Exception("Not logged in"))
+        if (getFeedHiddenTopics().any { it.name.equals(trimmed, ignoreCase = true) }) {
+            return Result.success(Unit)
+        }
+        return try {
+            db.collection(FEED_HIDDEN_TOPICS).document().set(
+                mapOf(
+                    "name" to trimmed,
+                    "hiddenBy" to uid,
+                    "hiddenAt" to Timestamp.now()
+                )
+            ).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "hideTopicFromBrowse error", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun unhideTopicFromBrowse(id: String): Result<Unit> {
+        if (!resolveRole(currentUser).canModerate()) {
+            return Result.failure(Exception("No permission to unhide topics."))
+        }
+        if (id.isBlank()) return Result.failure(Exception("Invalid topic id."))
+        return try {
+            db.collection(FEED_HIDDEN_TOPICS).document(id).delete().await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "unhideTopicFromBrowse error", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getCreateCategoryNames(): List<String> =
+        getFeedCategoryNames().filter { it != ALL_CATEGORY_LABEL }
 
     suspend fun getHiddenTopicNames(): Set<String> {
         return try {
@@ -690,8 +764,10 @@ object FirebaseHelper {
         return try {
             val snap = db.collection(HIDDEN_TOPICS).limit(200).get().await()
             snap.documents.mapNotNull { doc ->
-                doc.toObject(BannedTopic::class.java)?.copy(id = doc.id)
-            }.sortedByDescending { it.hiddenAt?.seconds ?: 0L }
+                val topic = doc.toObject(BannedTopic::class.java)?.copy(id = doc.id) ?: return@mapNotNull null
+                val bannedAt = doc.getTimestamp("bannedAt") ?: doc.getTimestamp("hiddenAt")
+                topic.copy(bannedAt = bannedAt ?: topic.bannedAt, hiddenAt = bannedAt ?: topic.hiddenAt)
+            }.sortedByDescending { it.bannedAt?.seconds ?: it.hiddenAt?.seconds ?: 0L }
         } catch (e: Exception) {
             Log.e(TAG, "getBannedTopics error", e)
             emptyList()
@@ -707,7 +783,7 @@ object FirebaseHelper {
     /** @deprecated Use [isTopicBanned]; kept for call-site clarity. */
     suspend fun isTopicHidden(name: String): Boolean = isTopicBanned(name)
 
-    suspend fun banTopic(name: String, categoryId: String? = null): Result<Unit> {
+    suspend fun banTopic(name: String, @Suppress("UNUSED_PARAMETER") categoryId: String? = null): Result<Unit> {
         if (!resolveRole(currentUser).canModerate()) {
             return Result.failure(Exception("No permission to ban topics."))
         }
@@ -715,20 +791,14 @@ object FirebaseHelper {
         if (trimmed.isBlank() || trimmed == ALL_CATEGORY_LABEL) {
             return Result.failure(Exception("Cannot ban this topic."))
         }
-        val uid = auth.currentUser?.uid ?: return Result.failure(Exception("Not logged in"))
-        val categories = getCategories()
-        val resolvedId = categoryId?.takeIf { it.isNotBlank() }
-            ?: categories.find { it.name.equals(trimmed, ignoreCase = true) }?.id
-            ?: resolveTopicCategoryId(trimmed, categories)
-        val key = normalizeHiddenTopicKey(trimmed)
-        if (key.isBlank()) return Result.failure(Exception("Invalid topic name."))
+        if (getBannedTopics().any { it.name.equals(trimmed, ignoreCase = true) }) {
+            return Result.success(Unit)
+        }
         return try {
-            db.collection(HIDDEN_TOPICS).document(key).set(
+            db.collection(HIDDEN_TOPICS).document().set(
                 mapOf(
                     "name" to trimmed,
-                    "categoryId" to resolvedId,
-                    "hiddenBy" to uid,
-                    "hiddenAt" to Timestamp.now()
+                    "bannedAt" to Timestamp.now()
                 )
             ).await()
             Result.success(Unit)
@@ -738,14 +808,13 @@ object FirebaseHelper {
         }
     }
 
-    suspend fun unbanTopic(name: String): Result<Unit> {
+    suspend fun unbanTopic(id: String): Result<Unit> {
         if (!resolveRole(currentUser).canModerate()) {
             return Result.failure(Exception("No permission to unban topics."))
         }
-        val key = normalizeHiddenTopicKey(name)
-        if (key.isBlank()) return Result.failure(Exception("Invalid topic name."))
+        if (id.isBlank()) return Result.failure(Exception("Invalid topic id."))
         return try {
-            db.collection(HIDDEN_TOPICS).document(key).delete().await()
+            db.collection(HIDDEN_TOPICS).document(id).delete().await()
             Result.success(Unit)
         } catch (e: Exception) {
             Log.e(TAG, "unbanTopic error", e)
@@ -754,18 +823,13 @@ object FirebaseHelper {
     }
 
     /** Names for feed filter chips: "All" + every category + any categories used on posts. */
-    suspend fun getFeedCategoryNames(): List<String> {
-        val hidden = getHiddenTopicNames()
-        val fromDb = getCategoryNames().toMutableSet()
-        try {
-            val posts = db.collection(POSTS).limit(200).get().await()
-            posts.documents.forEach { doc ->
-                doc.getString("category")?.takeIf { it.isNotBlank() }?.let { fromDb.add(it) }
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "getFeedCategoryNames post scan failed", e)
-        }
-        val visible = fromDb.filter { !hidden.contains(it.lowercase()) }.sorted()
+    suspend fun getFeedCategoryNames(includeFeedHidden: Boolean = false): List<String> {
+        val banned = getHiddenTopicNames()
+        val feedHidden = if (includeFeedHidden) emptySet() else getFeedHiddenTopicNames()
+        val visible = collectTopicNames()
+            .filter { !banned.contains(it.lowercase()) }
+            .filter { includeFeedHidden || !feedHidden.contains(it.lowercase()) }
+            .sorted()
         return listOf(ALL_CATEGORY_LABEL) + visible
     }
 
@@ -842,7 +906,8 @@ object FirebaseHelper {
     }
 
     suspend fun getLeaderboardData(limit: Int = 20): LeaderboardData {
-        val hidden = getHiddenTopicNames()
+        val banned = getHiddenTopicNames()
+        val feedHidden = getFeedHiddenTopicNames()
         val postCounts = getPostCountByCategory()
         // Only query rooms the user can read (topic + own DMs). An unfiltered query fails
         // when any inaccessible DM is in the result set.
@@ -857,7 +922,8 @@ object FirebaseHelper {
             .filter { it.isTopic() }
             .filter { room ->
                 val name = room.topicName?.takeIf { it.isNotBlank() } ?: room.title
-                !hidden.contains(name.lowercase())
+                val key = name.lowercase()
+                !banned.contains(key) && !feedHidden.contains(key)
             }
             .map { room ->
                 val name = room.topicName?.takeIf { it.isNotBlank() } ?: room.title
@@ -1756,7 +1822,15 @@ object FirebaseHelper {
     suspend fun searchTopics(query: String, limit: Int = 20): List<PostCategory> {
         val q = query.trim().lowercase()
         if (q.isBlank()) return emptyList()
-        return getCategories().filter { it.name.lowercase().contains(q) }.take(limit)
+        val banned = getHiddenTopicNames()
+        val feedHidden = getFeedHiddenTopicNames()
+        return collectTopicNames()
+            .filter { !banned.contains(it.lowercase()) }
+            .filter { !feedHidden.contains(it.lowercase()) }
+            .filter { it.lowercase().contains(q) }
+            .sorted()
+            .take(limit)
+            .mapIndexed { index, name -> PostCategory(id = "search-topic-$index", name = name) }
     }
 
     suspend fun searchChatRooms(query: String, limit: Int = 20): List<ChatRoom> {

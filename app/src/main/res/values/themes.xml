@@ -3,7 +3,7 @@
 
     <style name="Theme.Codex" parent="Theme.Codex.Midnight" />
 
-    <style name="Theme.Codex.Midnight" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Theme.Codex.Midnight" parent="Theme.Material3.Dark.NoActionBar">
         <item name="codexBackground">@color/midnight_primary</item>
         <item name="codexBackgroundDark">@color/midnight_primary_dark</item>
         <item name="codexSurface">@color/midnight_surface</item>
@@ -24,7 +24,28 @@
         <item name="android:windowBackground">@color/midnight_primary</item>
     </style>
 
-    <style name="Theme.Codex.Ocean" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Theme.Codex.Midnight.Light" parent="Theme.Material3.Light.NoActionBar">
+        <item name="codexBackground">@color/midnight_light_primary</item>
+        <item name="codexBackgroundDark">@color/midnight_light_primary_dark</item>
+        <item name="codexSurface">@color/midnight_light_surface</item>
+        <item name="codexSurfaceVariant">@color/midnight_light_surface_variant</item>
+        <item name="codexOnSurface">@color/midnight_light_on_surface</item>
+        <item name="codexOnSurfaceVariant">@color/midnight_light_on_surface_variant</item>
+        <item name="codexAccent">@color/midnight_light_accent</item>
+        <item name="codexAccentLight">@color/midnight_light_accent_light</item>
+        <item name="colorPrimary">@color/midnight_light_accent</item>
+        <item name="colorPrimaryVariant">@color/midnight_light_accent_light</item>
+        <item name="colorOnPrimary">@color/midnight_light_primary</item>
+        <item name="colorSecondary">@color/midnight_light_accent</item>
+        <item name="android:colorBackground">@color/midnight_light_primary</item>
+        <item name="colorSurface">@color/midnight_light_surface</item>
+        <item name="colorOnSurface">@color/midnight_light_on_surface</item>
+        <item name="android:statusBarColor">@color/midnight_light_primary_dark</item>
+        <item name="android:navigationBarColor">@color/midnight_light_primary_dark</item>
+        <item name="android:windowBackground">@color/midnight_light_primary</item>
+    </style>
+
+    <style name="Theme.Codex.Ocean" parent="Theme.Material3.Dark.NoActionBar">
         <item name="codexBackground">@color/ocean_primary</item>
         <item name="codexBackgroundDark">@color/ocean_primary_dark</item>
         <item name="codexSurface">@color/ocean_surface</item>
@@ -45,7 +66,28 @@
         <item name="android:windowBackground">@color/ocean_primary</item>
     </style>
 
-    <style name="Theme.Codex.Ember" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Theme.Codex.Ocean.Light" parent="Theme.Material3.Light.NoActionBar">
+        <item name="codexBackground">@color/ocean_light_primary</item>
+        <item name="codexBackgroundDark">@color/ocean_light_primary_dark</item>
+        <item name="codexSurface">@color/ocean_light_surface</item>
+        <item name="codexSurfaceVariant">@color/ocean_light_surface_variant</item>
+        <item name="codexOnSurface">@color/ocean_light_on_surface</item>
+        <item name="codexOnSurfaceVariant">@color/ocean_light_on_surface_variant</item>
+        <item name="codexAccent">@color/ocean_light_accent</item>
+        <item name="codexAccentLight">@color/ocean_light_accent_light</item>
+        <item name="colorPrimary">@color/ocean_light_accent</item>
+        <item name="colorPrimaryVariant">@color/ocean_light_accent_light</item>
+        <item name="colorOnPrimary">@color/ocean_light_primary</item>
+        <item name="colorSecondary">@color/ocean_light_accent</item>
+        <item name="android:colorBackground">@color/ocean_light_primary</item>
+        <item name="colorSurface">@color/ocean_light_surface</item>
+        <item name="colorOnSurface">@color/ocean_light_on_surface</item>
+        <item name="android:statusBarColor">@color/ocean_light_primary_dark</item>
+        <item name="android:navigationBarColor">@color/ocean_light_primary_dark</item>
+        <item name="android:windowBackground">@color/ocean_light_primary</item>
+    </style>
+
+    <style name="Theme.Codex.Ember" parent="Theme.Material3.Dark.NoActionBar">
         <item name="codexBackground">@color/ember_primary</item>
         <item name="codexBackgroundDark">@color/ember_primary_dark</item>
         <item name="codexSurface">@color/ember_surface</item>
@@ -66,7 +108,28 @@
         <item name="android:windowBackground">@color/ember_primary</item>
     </style>
 
-    <style name="Theme.Codex.Forest" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Theme.Codex.Ember.Light" parent="Theme.Material3.Light.NoActionBar">
+        <item name="codexBackground">@color/ember_light_primary</item>
+        <item name="codexBackgroundDark">@color/ember_light_primary_dark</item>
+        <item name="codexSurface">@color/ember_light_surface</item>
+        <item name="codexSurfaceVariant">@color/ember_light_surface_variant</item>
+        <item name="codexOnSurface">@color/ember_light_on_surface</item>
+        <item name="codexOnSurfaceVariant">@color/ember_light_on_surface_variant</item>
+        <item name="codexAccent">@color/ember_light_accent</item>
+        <item name="codexAccentLight">@color/ember_light_accent_light</item>
+        <item name="colorPrimary">@color/ember_light_accent</item>
+        <item name="colorPrimaryVariant">@color/ember_light_accent_light</item>
+        <item name="colorOnPrimary">@color/ember_light_primary</item>
+        <item name="colorSecondary">@color/ember_light_accent</item>
+        <item name="android:colorBackground">@color/ember_light_primary</item>
+        <item name="colorSurface">@color/ember_light_surface</item>
+        <item name="colorOnSurface">@color/ember_light_on_surface</item>
+        <item name="android:statusBarColor">@color/ember_light_primary_dark</item>
+        <item name="android:navigationBarColor">@color/ember_light_primary_dark</item>
+        <item name="android:windowBackground">@color/ember_light_primary</item>
+    </style>
+
+    <style name="Theme.Codex.Forest" parent="Theme.Material3.Dark.NoActionBar">
         <item name="codexBackground">@color/forest_primary</item>
         <item name="codexBackgroundDark">@color/forest_primary_dark</item>
         <item name="codexSurface">@color/forest_surface</item>
@@ -87,7 +150,28 @@
         <item name="android:windowBackground">@color/forest_primary</item>
     </style>
 
-    <style name="Theme.Codex.Aurora" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Theme.Codex.Forest.Light" parent="Theme.Material3.Light.NoActionBar">
+        <item name="codexBackground">@color/forest_light_primary</item>
+        <item name="codexBackgroundDark">@color/forest_light_primary_dark</item>
+        <item name="codexSurface">@color/forest_light_surface</item>
+        <item name="codexSurfaceVariant">@color/forest_light_surface_variant</item>
+        <item name="codexOnSurface">@color/forest_light_on_surface</item>
+        <item name="codexOnSurfaceVariant">@color/forest_light_on_surface_variant</item>
+        <item name="codexAccent">@color/forest_light_accent</item>
+        <item name="codexAccentLight">@color/forest_light_accent_light</item>
+        <item name="colorPrimary">@color/forest_light_accent</item>
+        <item name="colorPrimaryVariant">@color/forest_light_accent_light</item>
+        <item name="colorOnPrimary">@color/forest_light_primary</item>
+        <item name="colorSecondary">@color/forest_light_accent</item>
+        <item name="android:colorBackground">@color/forest_light_primary</item>
+        <item name="colorSurface">@color/forest_light_surface</item>
+        <item name="colorOnSurface">@color/forest_light_on_surface</item>
+        <item name="android:statusBarColor">@color/forest_light_primary_dark</item>
+        <item name="android:navigationBarColor">@color/forest_light_primary_dark</item>
+        <item name="android:windowBackground">@color/forest_light_primary</item>
+    </style>
+
+    <style name="Theme.Codex.Aurora" parent="Theme.Material3.Dark.NoActionBar">
         <item name="codexBackground">@color/aurora_primary</item>
         <item name="codexBackgroundDark">@color/aurora_primary_dark</item>
         <item name="codexSurface">@color/aurora_surface</item>
@@ -107,4 +191,236 @@
         <item name="android:navigationBarColor">@color/aurora_primary_dark</item>
         <item name="android:windowBackground">@color/aurora_primary</item>
     </style>
+
+    <style name="Theme.Codex.Aurora.Light" parent="Theme.Material3.Light.NoActionBar">
+        <item name="codexBackground">@color/aurora_light_primary</item>
+        <item name="codexBackgroundDark">@color/aurora_light_primary_dark</item>
+        <item name="codexSurface">@color/aurora_light_surface</item>
+        <item name="codexSurfaceVariant">@color/aurora_light_surface_variant</item>
+        <item name="codexOnSurface">@color/aurora_light_on_surface</item>
+        <item name="codexOnSurfaceVariant">@color/aurora_light_on_surface_variant</item>
+        <item name="codexAccent">@color/aurora_light_accent</item>
+        <item name="codexAccentLight">@color/aurora_light_accent_light</item>
+        <item name="colorPrimary">@color/aurora_light_accent</item>
+        <item name="colorPrimaryVariant">@color/aurora_light_accent_light</item>
+        <item name="colorOnPrimary">@color/aurora_light_primary</item>
+        <item name="colorSecondary">@color/aurora_light_accent</item>
+        <item name="android:colorBackground">@color/aurora_light_primary</item>
+        <item name="colorSurface">@color/aurora_light_surface</item>
+        <item name="colorOnSurface">@color/aurora_light_on_surface</item>
+        <item name="android:statusBarColor">@color/aurora_light_primary_dark</item>
+        <item name="android:navigationBarColor">@color/aurora_light_primary_dark</item>
+        <item name="android:windowBackground">@color/aurora_light_primary</item>
+    </style>
+
+    <style name="Theme.Codex.Sage" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="codexBackground">@color/sage_primary</item>
+        <item name="codexBackgroundDark">@color/sage_primary_dark</item>
+        <item name="codexSurface">@color/sage_surface</item>
+        <item name="codexSurfaceVariant">@color/sage_surface_variant</item>
+        <item name="codexOnSurface">@color/sage_on_surface</item>
+        <item name="codexOnSurfaceVariant">@color/sage_on_surface_variant</item>
+        <item name="codexAccent">@color/sage_accent</item>
+        <item name="codexAccentLight">@color/sage_accent_light</item>
+        <item name="colorPrimary">@color/sage_accent</item>
+        <item name="colorPrimaryVariant">@color/sage_accent_light</item>
+        <item name="colorOnPrimary">@color/sage_primary</item>
+        <item name="colorSecondary">@color/sage_accent</item>
+        <item name="android:colorBackground">@color/sage_primary</item>
+        <item name="colorSurface">@color/sage_surface</item>
+        <item name="colorOnSurface">@color/sage_on_surface</item>
+        <item name="android:statusBarColor">@color/sage_primary_dark</item>
+        <item name="android:navigationBarColor">@color/sage_primary_dark</item>
+        <item name="android:windowBackground">@color/sage_primary</item>
+    </style>
+
+    <style name="Theme.Codex.Sage.Light" parent="Theme.Material3.Light.NoActionBar">
+        <item name="codexBackground">@color/sage_light_primary</item>
+        <item name="codexBackgroundDark">@color/sage_light_primary_dark</item>
+        <item name="codexSurface">@color/sage_light_surface</item>
+        <item name="codexSurfaceVariant">@color/sage_light_surface_variant</item>
+        <item name="codexOnSurface">@color/sage_light_on_surface</item>
+        <item name="codexOnSurfaceVariant">@color/sage_light_on_surface_variant</item>
+        <item name="codexAccent">@color/sage_light_accent</item>
+        <item name="codexAccentLight">@color/sage_light_accent_light</item>
+        <item name="colorPrimary">@color/sage_light_accent</item>
+        <item name="colorPrimaryVariant">@color/sage_light_accent_light</item>
+        <item name="colorOnPrimary">@color/sage_light_primary</item>
+        <item name="colorSecondary">@color/sage_light_accent</item>
+        <item name="android:colorBackground">@color/sage_light_primary</item>
+        <item name="colorSurface">@color/sage_light_surface</item>
+        <item name="colorOnSurface">@color/sage_light_on_surface</item>
+        <item name="android:statusBarColor">@color/sage_light_primary_dark</item>
+        <item name="android:navigationBarColor">@color/sage_light_primary_dark</item>
+        <item name="android:windowBackground">@color/sage_light_primary</item>
+    </style>
+
+    <style name="Theme.Codex.Dusk" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="codexBackground">@color/dusk_primary</item>
+        <item name="codexBackgroundDark">@color/dusk_primary_dark</item>
+        <item name="codexSurface">@color/dusk_surface</item>
+        <item name="codexSurfaceVariant">@color/dusk_surface_variant</item>
+        <item name="codexOnSurface">@color/dusk_on_surface</item>
+        <item name="codexOnSurfaceVariant">@color/dusk_on_surface_variant</item>
+        <item name="codexAccent">@color/dusk_accent</item>
+        <item name="codexAccentLight">@color/dusk_accent_light</item>
+        <item name="colorPrimary">@color/dusk_accent</item>
+        <item name="colorPrimaryVariant">@color/dusk_accent_light</item>
+        <item name="colorOnPrimary">@color/dusk_primary</item>
+        <item name="colorSecondary">@color/dusk_accent</item>
+        <item name="android:colorBackground">@color/dusk_primary</item>
+        <item name="colorSurface">@color/dusk_surface</item>
+        <item name="colorOnSurface">@color/dusk_on_surface</item>
+        <item name="android:statusBarColor">@color/dusk_primary_dark</item>
+        <item name="android:navigationBarColor">@color/dusk_primary_dark</item>
+        <item name="android:windowBackground">@color/dusk_primary</item>
+    </style>
+
+    <style name="Theme.Codex.Dusk.Light" parent="Theme.Material3.Light.NoActionBar">
+        <item name="codexBackground">@color/dusk_light_primary</item>
+        <item name="codexBackgroundDark">@color/dusk_light_primary_dark</item>
+        <item name="codexSurface">@color/dusk_light_surface</item>
+        <item name="codexSurfaceVariant">@color/dusk_light_surface_variant</item>
+        <item name="codexOnSurface">@color/dusk_light_on_surface</item>
+        <item name="codexOnSurfaceVariant">@color/dusk_light_on_surface_variant</item>
+        <item name="codexAccent">@color/dusk_light_accent</item>
+        <item name="codexAccentLight">@color/dusk_light_accent_light</item>
+        <item name="colorPrimary">@color/dusk_light_accent</item>
+        <item name="colorPrimaryVariant">@color/dusk_light_accent_light</item>
+        <item name="colorOnPrimary">@color/dusk_light_primary</item>
+        <item name="colorSecondary">@color/dusk_light_accent</item>
+        <item name="android:colorBackground">@color/dusk_light_primary</item>
+        <item name="colorSurface">@color/dusk_light_surface</item>
+        <item name="colorOnSurface">@color/dusk_light_on_surface</item>
+        <item name="android:statusBarColor">@color/dusk_light_primary_dark</item>
+        <item name="android:navigationBarColor">@color/dusk_light_primary_dark</item>
+        <item name="android:windowBackground">@color/dusk_light_primary</item>
+    </style>
+
+    <style name="Theme.Codex.Sand" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="codexBackground">@color/sand_primary</item>
+        <item name="codexBackgroundDark">@color/sand_primary_dark</item>
+        <item name="codexSurface">@color/sand_surface</item>
+        <item name="codexSurfaceVariant">@color/sand_surface_variant</item>
+        <item name="codexOnSurface">@color/sand_on_surface</item>
+        <item name="codexOnSurfaceVariant">@color/sand_on_surface_variant</item>
+        <item name="codexAccent">@color/sand_accent</item>
+        <item name="codexAccentLight">@color/sand_accent_light</item>
+        <item name="colorPrimary">@color/sand_accent</item>
+        <item name="colorPrimaryVariant">@color/sand_accent_light</item>
+        <item name="colorOnPrimary">@color/sand_primary</item>
+        <item name="colorSecondary">@color/sand_accent</item>
+        <item name="android:colorBackground">@color/sand_primary</item>
+        <item name="colorSurface">@color/sand_surface</item>
+        <item name="colorOnSurface">@color/sand_on_surface</item>
+        <item name="android:statusBarColor">@color/sand_primary_dark</item>
+        <item name="android:navigationBarColor">@color/sand_primary_dark</item>
+        <item name="android:windowBackground">@color/sand_primary</item>
+    </style>
+
+    <style name="Theme.Codex.Sand.Light" parent="Theme.Material3.Light.NoActionBar">
+        <item name="codexBackground">@color/sand_light_primary</item>
+        <item name="codexBackgroundDark">@color/sand_light_primary_dark</item>
+        <item name="codexSurface">@color/sand_light_surface</item>
+        <item name="codexSurfaceVariant">@color/sand_light_surface_variant</item>
+        <item name="codexOnSurface">@color/sand_light_on_surface</item>
+        <item name="codexOnSurfaceVariant">@color/sand_light_on_surface_variant</item>
+        <item name="codexAccent">@color/sand_light_accent</item>
+        <item name="codexAccentLight">@color/sand_light_accent_light</item>
+        <item name="colorPrimary">@color/sand_light_accent</item>
+        <item name="colorPrimaryVariant">@color/sand_light_accent_light</item>
+        <item name="colorOnPrimary">@color/sand_light_primary</item>
+        <item name="colorSecondary">@color/sand_light_accent</item>
+        <item name="android:colorBackground">@color/sand_light_primary</item>
+        <item name="colorSurface">@color/sand_light_surface</item>
+        <item name="colorOnSurface">@color/sand_light_on_surface</item>
+        <item name="android:statusBarColor">@color/sand_light_primary_dark</item>
+        <item name="android:navigationBarColor">@color/sand_light_primary_dark</item>
+        <item name="android:windowBackground">@color/sand_light_primary</item>
+    </style>
+
+    <style name="Theme.Codex.Mist" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="codexBackground">@color/mist_primary</item>
+        <item name="codexBackgroundDark">@color/mist_primary_dark</item>
+        <item name="codexSurface">@color/mist_surface</item>
+        <item name="codexSurfaceVariant">@color/mist_surface_variant</item>
+        <item name="codexOnSurface">@color/mist_on_surface</item>
+        <item name="codexOnSurfaceVariant">@color/mist_on_surface_variant</item>
+        <item name="codexAccent">@color/mist_accent</item>
+        <item name="codexAccentLight">@color/mist_accent_light</item>
+        <item name="colorPrimary">@color/mist_accent</item>
+        <item name="colorPrimaryVariant">@color/mist_accent_light</item>
+        <item name="colorOnPrimary">@color/mist_primary</item>
+        <item name="colorSecondary">@color/mist_accent</item>
+        <item name="android:colorBackground">@color/mist_primary</item>
+        <item name="colorSurface">@color/mist_surface</item>
+        <item name="colorOnSurface">@color/mist_on_surface</item>
+        <item name="android:statusBarColor">@color/mist_primary_dark</item>
+        <item name="android:navigationBarColor">@color/mist_primary_dark</item>
+        <item name="android:windowBackground">@color/mist_primary</item>
+    </style>
+
+    <style name="Theme.Codex.Mist.Light" parent="Theme.Material3.Light.NoActionBar">
+        <item name="codexBackground">@color/mist_light_primary</item>
+        <item name="codexBackgroundDark">@color/mist_light_primary_dark</item>
+        <item name="codexSurface">@color/mist_light_surface</item>
+        <item name="codexSurfaceVariant">@color/mist_light_surface_variant</item>
+        <item name="codexOnSurface">@color/mist_light_on_surface</item>
+        <item name="codexOnSurfaceVariant">@color/mist_light_on_surface_variant</item>
+        <item name="codexAccent">@color/mist_light_accent</item>
+        <item name="codexAccentLight">@color/mist_light_accent_light</item>
+        <item name="colorPrimary">@color/mist_light_accent</item>
+        <item name="colorPrimaryVariant">@color/mist_light_accent_light</item>
+        <item name="colorOnPrimary">@color/mist_light_primary</item>
+        <item name="colorSecondary">@color/mist_light_accent</item>
+        <item name="android:colorBackground">@color/mist_light_primary</item>
+        <item name="colorSurface">@color/mist_light_surface</item>
+        <item name="colorOnSurface">@color/mist_light_on_surface</item>
+        <item name="android:statusBarColor">@color/mist_light_primary_dark</item>
+        <item name="android:navigationBarColor">@color/mist_light_primary_dark</item>
+        <item name="android:windowBackground">@color/mist_light_primary</item>
+    </style>
+
+    <style name="Theme.Codex.Linen" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="codexBackground">@color/linen_primary</item>
+        <item name="codexBackgroundDark">@color/linen_primary_dark</item>
+        <item name="codexSurface">@color/linen_surface</item>
+        <item name="codexSurfaceVariant">@color/linen_surface_variant</item>
+        <item name="codexOnSurface">@color/linen_on_surface</item>
+        <item name="codexOnSurfaceVariant">@color/linen_on_surface_variant</item>
+        <item name="codexAccent">@color/linen_accent</item>
+        <item name="codexAccentLight">@color/linen_accent_light</item>
+        <item name="colorPrimary">@color/linen_accent</item>
+        <item name="colorPrimaryVariant">@color/linen_accent_light</item>
+        <item name="colorOnPrimary">@color/linen_primary</item>
+        <item name="colorSecondary">@color/linen_accent</item>
+        <item name="android:colorBackground">@color/linen_primary</item>
+        <item name="colorSurface">@color/linen_surface</item>
+        <item name="colorOnSurface">@color/linen_on_surface</item>
+        <item name="android:statusBarColor">@color/linen_primary_dark</item>
+        <item name="android:navigationBarColor">@color/linen_primary_dark</item>
+        <item name="android:windowBackground">@color/linen_primary</item>
+    </style>
+
+    <style name="Theme.Codex.Linen.Light" parent="Theme.Material3.Light.NoActionBar">
+        <item name="codexBackground">@color/linen_light_primary</item>
+        <item name="codexBackgroundDark">@color/linen_light_primary_dark</item>
+        <item name="codexSurface">@color/linen_light_surface</item>
+        <item name="codexSurfaceVariant">@color/linen_light_surface_variant</item>
+        <item name="codexOnSurface">@color/linen_light_on_surface</item>
+        <item name="codexOnSurfaceVariant">@color/linen_light_on_surface_variant</item>
+        <item name="codexAccent">@color/linen_light_accent</item>
+        <item name="codexAccentLight">@color/linen_light_accent_light</item>
+        <item name="colorPrimary">@color/linen_light_accent</item>
+        <item name="colorPrimaryVariant">@color/linen_light_accent_light</item>
+        <item name="colorOnPrimary">@color/linen_light_primary</item>
+        <item name="colorSecondary">@color/linen_light_accent</item>
+        <item name="android:colorBackground">@color/linen_light_primary</item>
+        <item name="colorSurface">@color/linen_light_surface</item>
+        <item name="colorOnSurface">@color/linen_light_on_surface</item>
+        <item name="android:statusBarColor">@color/linen_light_primary_dark</item>
+        <item name="android:navigationBarColor">@color/linen_light_primary_dark</item>
+        <item name="android:windowBackground">@color/linen_light_primary</item>
+    </style>
+
 </resources>

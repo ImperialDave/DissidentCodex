@@ -4,11 +4,9 @@ import com.google.firebase.Timestamp
 import com.google.firebase.firestore.IgnoreExtraProperties
 
 @IgnoreExtraProperties
-data class BannedTopic(
+data class FeedHiddenTopic(
     val id: String = "",
     val name: String = "",
-    val categoryId: String = "",
-    val hiddenBy: String = "",
-    val hiddenAt: Timestamp? = null,
-    val bannedAt: Timestamp? = null
+    val hiddenBy: String? = null,
+    val hiddenAt: Timestamp? = null
 )

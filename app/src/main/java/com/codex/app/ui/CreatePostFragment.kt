@@ -49,7 +49,7 @@ class CreatePostFragment : Fragment(), GifPickerBottomSheet.Listener {
 
     private fun loadCategories() {
         viewLifecycleOwner.lifecycleScope.launch {
-            categoryNames = FirebaseHelper.getCategoryNames()
+            categoryNames = FirebaseHelper.getCreateCategoryNames()
             if (!isAdded) return@launch
             renderCategoryChips()
         }

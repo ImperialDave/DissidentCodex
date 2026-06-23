@@ -240,12 +240,22 @@
             android:textSize="16sp"
             android:textStyle="bold" />
 
-        <com.google.android.material.chip.ChipGroup
-            android:id="@+id/themeChipGroup"
+        <TextView
+            android:id="@+id/themeSummaryText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:textColor="?attr/codexOnSurfaceVariant"
+            android:textSize="13sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/appearanceButton"
+            style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            app:singleSelection="true" />
+            android:text="@string/appearance_open"
+            android:textAllCaps="false" />
 
         <!-- Moderation panel (visible for mods/admins) -->
         <LinearLayout

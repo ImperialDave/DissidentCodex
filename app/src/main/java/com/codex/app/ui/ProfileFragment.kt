@@ -93,23 +93,30 @@ class ProfileFragment : Fragment() {
     }
 
     private fun setupThemePicker() {
-        val current = ThemeManager.getPalette(requireContext())
-        binding.themeChipGroup.removeAllViews()
-        ThemeManager.Palette.entries.forEach { palette ->
-            val chip = Chip(requireContext()).apply {
-                text = getString(palette.labelRes)
-                isCheckable = true
-                isChecked = palette == current
-                setOnClickListener {
-                    if (palette != ThemeManager.getPalette(requireContext())) {
-                        ThemeManager.savePalette(requireContext(), palette)
-                        Toast.makeText(requireContext(), getString(R.string.theme_applied), Toast.LENGTH_SHORT).show()
-                        activity?.recreate()
-                    }
+        updateThemeSummary()
+        binding.appearanceButton.setOnClickListener {
+            AppearanceBottomSheet().apply {
+                onApplied = {
+                    Toast.makeText(requireContext(), getString(R.string.theme_applied), Toast.LENGTH_SHORT).show()
+                    activity?.recreate()
                 }
-            }
-            binding.themeChipGroup.addView(chip)
+            }.show(parentFragmentManager, "appearance")
         }
+    }
+
+    private fun updateThemeSummary() {
+        val ctx = requireContext()
+        val palette = ThemeManager.getPalette(ctx)
+        val modeLabel = if (ThemeManager.getColorMode(ctx) == ThemeManager.ColorMode.LIGHT) {
+            getString(R.string.appearance_light)
+        } else {
+            getString(R.string.appearance_dark)
+        }
+        binding.themeSummaryText.text = getString(
+            R.string.appearance_summary,
+            getString(palette.labelRes),
+            modeLabel
+        )
     }
 
     private fun setupMyCommentsRecycler() {

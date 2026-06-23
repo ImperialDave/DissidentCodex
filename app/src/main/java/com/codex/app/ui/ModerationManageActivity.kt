@@ -9,12 +9,17 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.codex.app.R
 import com.codex.app.adapters.ModerationCategoryAdapter
 import com.codex.app.adapters.ModerationCategoryItem
+import com.codex.app.adapters.ModerationHideTopicAdapter
+import com.codex.app.adapters.ModerationHideTopicItem
 import com.codex.app.adapters.ModerationRestrictedItem
 import com.codex.app.adapters.ModerationRestrictedTopicAdapter
 import com.codex.app.adapters.ModerationTopicAdapter
 import com.codex.app.databinding.ActivityModerationManageBinding
+import android.text.Editable
+import android.text.TextWatcher
 import com.codex.app.models.BannedTopic
 import com.codex.app.models.ChatRoom
+import com.codex.app.models.FeedHiddenTopic
 import com.codex.app.utils.FirebaseHelper
 import com.codex.app.utils.WindowInsetsHelper
 import com.codex.app.utils.setupInsideScrollView
@@ -26,6 +31,10 @@ class ModerationManageActivity : BaseThemedActivity() {
     private lateinit var topicAdapter: ModerationTopicAdapter
     private lateinit var restrictedAdapter: ModerationRestrictedTopicAdapter
     private lateinit var categoryAdapter: ModerationCategoryAdapter
+    private lateinit var hideTopicAdapter: ModerationHideTopicAdapter
+    private var allTopicNames: List<String> = emptyList()
+    private var feedHiddenTopics: List<FeedHiddenTopic> = emptyList()
+    private var hideTopicQuery: String = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -106,6 +115,33 @@ class ModerationManageActivity : BaseThemedActivity() {
         binding.topicRoomsRecycler.layoutManager = LinearLayoutManager(this)
         binding.topicRoomsRecycler.adapter = topicAdapter
 
+        hideTopicAdapter = ModerationHideTopicAdapter { item ->
+            lifecycleScope.launch {
+                val res = if (item.hidden && item.hiddenId != null) {
+                    FirebaseHelper.unhideTopicFromBrowse(item.hiddenId)
+                } else {
+                    FirebaseHelper.hideTopicFromBrowse(item.name)
+                }
+                if (res.isSuccess) {
+                    Toast.makeText(this@ModerationManageActivity, R.string.action_success, Toast.LENGTH_SHORT).show()
+                    loadData()
+                } else {
+                    showError(res.exceptionOrNull()?.message)
+                }
+            }
+        }
+        binding.hideTopicsRecycler.setupInsideScrollView()
+        binding.hideTopicsRecycler.layoutManager = LinearLayoutManager(this)
+        binding.hideTopicsRecycler.adapter = hideTopicAdapter
+        binding.hideTopicSearchInput.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
+            override fun afterTextChanged(s: Editable?) {
+                hideTopicQuery = s?.toString().orEmpty()
+                renderHideTopics()
+            }
+        })
+
         categoryAdapter = ModerationCategoryAdapter { item ->
             confirm(getString(R.string.delete_category_confirm, item.name)) {
                 lifecycleScope.launch {
@@ -138,8 +174,12 @@ class ModerationManageActivity : BaseThemedActivity() {
         binding.loadingBar.visibility = View.VISIBLE
         lifecycleScope.launch {
             val banned = FirebaseHelper.getBannedTopics()
+            feedHiddenTopics = FirebaseHelper.getFeedHiddenTopics()
+            allTopicNames = FirebaseHelper.getAllTopicNames()
             val bannedNames = banned.map { it.name.lowercase() }.toSet()
             val allTopicRooms = FirebaseHelper.getChatRoomsForInbox().filter { it.isTopic() }
+
+            renderHideTopics()
 
             val restricted = mutableListOf<ModerationRestrictedItem>()
             banned.forEach { topic ->
@@ -158,7 +198,7 @@ class ModerationManageActivity : BaseThemedActivity() {
             binding.noTopicsText.visibility = if (activeRooms.isEmpty()) View.VISIBLE else View.GONE
 
             val registered = FirebaseHelper.getCategories()
-            val feedNames = FirebaseHelper.getFeedCategoryNames()
+            val feedNames = FirebaseHelper.getFeedCategoryNames(includeFeedHidden = true)
                 .filter { it != FirebaseHelper.ALL_CATEGORY_LABEL }
             val items = feedNames.map { name ->
                 val match = registered.find { it.name.equals(name, ignoreCase = true) }
@@ -202,7 +242,7 @@ class ModerationManageActivity : BaseThemedActivity() {
             positiveLabel = getString(R.string.unban_topic)
         ) {
             lifecycleScope.launch {
-                val res = FirebaseHelper.unbanTopic(topic.name)
+                val res = FirebaseHelper.unbanTopic(topic.id)
                 if (res.isSuccess) {
                     Toast.makeText(this@ModerationManageActivity, R.string.topic_unbanned, Toast.LENGTH_SHORT).show()
                     loadData()
@@ -211,6 +251,23 @@ class ModerationManageActivity : BaseThemedActivity() {
                 }
             }
         }
+    }
+
+    private fun renderHideTopics() {
+        val hiddenByName = feedHiddenTopics.associateBy { it.name.lowercase() }
+        val query = hideTopicQuery.trim().lowercase()
+        val items = allTopicNames
+            .filter { query.isBlank() || it.lowercase().contains(query) }
+            .map { name ->
+                val hiddenDoc = hiddenByName[name.lowercase()]
+                ModerationHideTopicItem(
+                    name = name,
+                    hidden = hiddenDoc != null,
+                    hiddenId = hiddenDoc?.id
+                )
+            }
+        hideTopicAdapter.submitList(items)
+        binding.noHideTopicsText.visibility = if (items.isEmpty()) View.VISIBLE else View.GONE
     }
 
     private fun showError(message: String?) {

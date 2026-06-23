@@ -29,6 +29,7 @@ class FeedFragment : Fragment() {
     private lateinit var postAdapter: PostAdapter
     private var currentCategory: String = FirebaseHelper.ALL_CATEGORY_LABEL
     private var categoryNames: List<String> = listOf(FirebaseHelper.ALL_CATEGORY_LABEL)
+    private var feedHiddenTopicNames: Set<String> = emptySet()
     private var allPosts: List<Post> = emptyList()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
@@ -54,7 +55,13 @@ class FeedFragment : Fragment() {
 
     private fun refreshFeed() {
         viewLifecycleOwner.lifecycleScope.launch {
-            categoryNames = FirebaseHelper.getFeedCategoryNames()
+            val modView = FirebaseHelper.resolveRole(FirebaseHelper.currentUser).canModerate()
+            categoryNames = FirebaseHelper.getFeedCategoryNames(includeFeedHidden = modView)
+            feedHiddenTopicNames = if (modView) {
+                FirebaseHelper.getFeedHiddenTopicNames()
+            } else {
+                emptySet()
+            }
             if (!isAdded) return@launch
             if (!categoryNames.contains(currentCategory)) {
                 currentCategory = FirebaseHelper.ALL_CATEGORY_LABEL
@@ -68,10 +75,17 @@ class FeedFragment : Fragment() {
         val group = _binding?.categoryChips ?: return
         group.removeAllViews()
         categoryNames.forEach { cat ->
+            val feedHidden = cat != FirebaseHelper.ALL_CATEGORY_LABEL &&
+                feedHiddenTopicNames.contains(cat.lowercase())
             val chip = Chip(requireContext()).apply {
-                text = cat
+                text = if (feedHidden) cat + getString(R.string.feed_hidden_topic_marker) else cat
                 isCheckable = true
                 isChecked = cat == currentCategory
+                if (feedHidden) {
+                    chipBackgroundColor = android.content.res.ColorStateList.valueOf(
+                        android.graphics.Color.parseColor("#33F97316")
+                    )
+                }
                 setOnClickListener {
                     currentCategory = cat
                     for (i in 0 until group.childCount) {

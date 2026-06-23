@@ -23,8 +23,8 @@ android {
         applicationId = "com.codex.app"
         minSdk = 24
         targetSdk = 35
-        versionCode = 38
-        versionName = "1.16.0-web-parity"
+        versionCode = 39
+        versionName = "1.17.0-theme-topic-parity"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

@@ -7,6 +7,7 @@ import com.google.firebase.appcheck.AppCheckProviderFactory
 import com.google.firebase.appcheck.ktx.appCheck
 import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderFactory
 import com.google.firebase.ktx.Firebase
+import com.codex.app.utils.ThemeManager
 
 class CodexApplication : Application() {
 
@@ -19,6 +20,7 @@ class CodexApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         instance = this
+        ThemeManager.init(this)
         if (FirebaseApp.getApps(this).isEmpty()) {
             FirebaseApp.initializeApp(this)
         }

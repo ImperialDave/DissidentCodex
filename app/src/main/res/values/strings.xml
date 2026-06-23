@@ -161,12 +161,34 @@
     <!-- Theme -->
     <string name="appearance">Appearance</string>
     <string name="colorscape">Colorscape</string>
-    <string name="theme_midnight">Midnight</string>
-    <string name="theme_ocean">Ocean</string>
-    <string name="theme_ember">Ember</string>
-    <string name="theme_forest">Forest</string>
-    <string name="theme_aurora">Aurora</string>
-    <string name="theme_applied">Colorscape updated</string>
+    <string name="theme_midnight">Grid</string>
+    <string name="theme_ocean">Wave</string>
+    <string name="theme_ember">Heat</string>
+    <string name="theme_forest">Matrix</string>
+    <string name="theme_aurora">Pulse</string>
+    <string name="theme_sage">Sage</string>
+    <string name="theme_dusk">Dusk</string>
+    <string name="theme_sand">Sand</string>
+    <string name="theme_mist">Mist</string>
+    <string name="theme_linen">Linen</string>
+    <string name="theme_applied">Appearance updated</string>
+    <string name="appearance_title">Appearance</string>
+    <string name="appearance_open">Customize appearance</string>
+    <string name="appearance_summary">%1$s · %2$s</string>
+    <string name="appearance_brightness_hint">Light or dark interface.</string>
+    <string name="appearance_dark">Dark</string>
+    <string name="appearance_light">Light</string>
+    <string name="appearance_original">Original</string>
+    <string name="appearance_original_hint">Cyber palettes with neon accents</string>
+    <string name="appearance_calm">Calm</string>
+    <string name="appearance_calm_hint">Soft, simple tones for relaxed reading</string>
+    <string name="hide_from_browse">Hide from browse</string>
+    <string name="hide_from_browse_hint">Hidden topics disappear from feed chips, browse, and leaderboard. Posts and chats still work.</string>
+    <string name="topic_status_feed_hidden">Hidden from browse</string>
+    <string name="hide_topic">Hide</string>
+    <string name="unhide_topic">Unhide</string>
+    <string name="search_topics_to_hide">Search topics to hide…</string>
+    <string name="feed_hidden_topic_marker"> (hidden)</string>
 
     <!-- User categories -->
     <string name="category_hint">Type a new category or tap one below</string>
