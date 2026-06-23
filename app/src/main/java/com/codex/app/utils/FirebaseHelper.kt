@@ -47,6 +47,7 @@ object FirebaseHelper {
     private const val FAVORITE_CHATS = "favoriteChats"
     private const val FAVORITE_CATEGORIES = "favoriteCategories"
     private const val FRIENDS = "friends"
+    private const val BLOCKED_USERS = "blockedUsers"
     private const val FRIEND_REQUESTS = "friendRequests"
     private const val HIDDEN_TOPICS = "hiddenTopics"
     private const val FEED_HIDDEN_TOPICS = "feedHiddenTopics"
@@ -410,6 +411,10 @@ object FirebaseHelper {
             if (effectiveCat != null) {
                 posts = posts.filter { it.category == effectiveCat }
             }
+            val blockedIds = getBlockedUserIds()
+            if (blockedIds.isNotEmpty()) {
+                posts = posts.filter { it.authorId !in blockedIds }
+            }
             posts.take(limit.toInt())
         } catch (e: Exception) {
             Log.e(TAG, "getPosts error", e)
@@ -484,6 +489,7 @@ object FirebaseHelper {
     }
 
     private var likedPostIdsCache: Set<String>? = null
+    private var blockedUserIdsCache: Set<String>? = null
     private var likedCommentIdsCache: Set<String>? = null
 
     private fun likedPostsRef(uid: String) =
@@ -1073,6 +1079,7 @@ object FirebaseHelper {
             snap.documents.mapNotNull { doc ->
                 doc.toObject(Comment::class.java)?.copy(id = doc.id)
             }.sortedBy { it.createdAt?.seconds ?: 0L }
+                .filter { it.authorId !in getBlockedUserIds() }
         } catch (e: Exception) {
             Log.e(TAG, "getComments error", e)
             emptyList()
@@ -1319,6 +1326,7 @@ object FirebaseHelper {
     // For feed: get posts by a specific user
     // Populates .id (critical for clicks/deletes from profile history and mod views).
     suspend fun getPostsByUser(uid: String): List<Post> {
+        if (uid in getBlockedUserIds()) return emptyList()
         return try {
             val snap = db.collection(POSTS)
                 .whereEqualTo("authorId", uid)
@@ -1472,6 +1480,9 @@ object FirebaseHelper {
         val fbUser = auth.currentUser ?: return Result.failure(Exception("Not logged in"))
         if (otherUserId == fbUser.uid) {
             return Result.failure(Exception("Cannot message yourself."))
+        }
+        if (isBlockedEitherWay(otherUserId)) {
+            return Result.failure(Exception("Cannot message this user."))
         }
         val roomId = ChatRoom.dmRoomId(fbUser.uid, otherUserId)
         return try {
@@ -2062,6 +2073,102 @@ object FirebaseHelper {
 
     private fun friendsRef(uid: String) = db.collection(USERS).document(uid).collection(FRIENDS)
 
+    private fun blockedUsersRef(uid: String) = db.collection(USERS).document(uid).collection(BLOCKED_USERS)
+
+    suspend fun getBlockedUserIds(): Set<String> {
+        blockedUserIdsCache?.let { return it }
+        val uid = auth.currentUser?.uid ?: return emptySet<String>().also { blockedUserIdsCache = it }
+        return try {
+            val snap = blockedUsersRef(uid).get().await()
+            snap.documents.map { it.id }.toSet().also { blockedUserIdsCache = it }
+        } catch (e: Exception) {
+            Log.e(TAG, "getBlockedUserIds error", e)
+            emptySet()
+        }
+    }
+
+    suspend fun isBlocked(otherUid: String): Boolean {
+        val myUid = auth.currentUser?.uid ?: return false
+        if (myUid == otherUid) return false
+        return try {
+            blockedUsersRef(myUid).document(otherUid).get().await().exists()
+        } catch (e: Exception) {
+            Log.e(TAG, "isBlocked error", e)
+            false
+        }
+    }
+
+    suspend fun isBlockedEitherWay(otherUid: String): Boolean {
+        val myUid = auth.currentUser?.uid ?: return false
+        if (myUid == otherUid) return false
+        return try {
+            val mine = blockedUsersRef(myUid).document(otherUid).get().await().exists()
+            if (mine) return true
+            blockedUsersRef(otherUid).document(myUid).get().await().exists()
+        } catch (e: Exception) {
+            Log.e(TAG, "isBlockedEitherWay error", e)
+            false
+        }
+    }
+
+    private suspend fun clearFriendRequestsBetween(uidA: String, uidB: String) {
+        val pairs = listOf(
+            db.collection(FRIEND_REQUESTS)
+                .whereEqualTo("fromUid", uidA)
+                .whereEqualTo("toUid", uidB)
+                .whereEqualTo("status", FriendRequest.STATUS_PENDING),
+            db.collection(FRIEND_REQUESTS)
+                .whereEqualTo("fromUid", uidB)
+                .whereEqualTo("toUid", uidA)
+                .whereEqualTo("status", FriendRequest.STATUS_PENDING)
+        )
+        pairs.forEach { q ->
+            val snap = q.get().await()
+            if (snap.isEmpty) return@forEach
+            val batch = db.batch()
+            snap.documents.forEach { batch.delete(it.reference) }
+            batch.commit().await()
+        }
+    }
+
+    suspend fun blockUser(otherUid: String): Result<Unit> {
+        val myUid = auth.currentUser?.uid ?: return Result.failure(Exception("Not logged in"))
+        if (myUid == otherUid) return Result.failure(Exception("Cannot block yourself."))
+        return try {
+            val other = fetchUser(otherUid)
+            val batch = db.batch()
+            batch.set(
+                blockedUsersRef(myUid).document(otherUid),
+                hashMapOf(
+                    "uid" to otherUid,
+                    "displayName" to (other?.displayName?.ifBlank { "User" } ?: "User"),
+                    "blockedAt" to Timestamp.now()
+                )
+            )
+            batch.delete(friendsRef(myUid).document(otherUid))
+            batch.delete(friendsRef(otherUid).document(myUid))
+            batch.commit().await()
+            clearFriendRequestsBetween(myUid, otherUid)
+            blockedUserIdsCache = null
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "blockUser error", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun unblockUser(otherUid: String): Result<Unit> {
+        val myUid = auth.currentUser?.uid ?: return Result.failure(Exception("Not logged in"))
+        return try {
+            blockedUsersRef(myUid).document(otherUid).delete().await()
+            blockedUserIdsCache = null
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "unblockUser error", e)
+            Result.failure(e)
+        }
+    }
+
     private fun favoriteCategoriesRef(uid: String) =
         db.collection(USERS).document(uid).collection(FAVORITE_CATEGORIES)
 
@@ -2138,6 +2245,9 @@ object FirebaseHelper {
     suspend fun sendFriendRequest(toUid: String): Result<Unit> {
         val myUid = auth.currentUser?.uid ?: return Result.failure(Exception("Not logged in"))
         if (myUid == toUid) return Result.failure(Exception("Cannot friend yourself."))
+        if (isBlockedEitherWay(toUid)) {
+            return Result.failure(Exception("Cannot send friend request to this user."))
+        }
 
         return try {
             when (getFriendshipStatus(toUid)) {

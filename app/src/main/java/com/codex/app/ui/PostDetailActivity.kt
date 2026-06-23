@@ -10,6 +10,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import com.codex.app.utils.setupInsideScrollView
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
+import com.codex.app.MainActivity
 import com.codex.app.R
 import com.codex.app.adapters.CommentAdapter
 import com.codex.app.adapters.PostAdapter
@@ -156,6 +157,11 @@ class PostDetailActivity : BaseThemedActivity(), GifPickerBottomSheet.Listener {
             FirebaseHelper.refreshLikedCommentCache()
             val post = FirebaseHelper.getPost(pid)
             currentPost = post
+            if (post != null && post.authorId in FirebaseHelper.getBlockedUserIds()) {
+                Toast.makeText(this@PostDetailActivity, R.string.user_blocked_banner, Toast.LENGTH_SHORT).show()
+                finish()
+                return@launch
+            }
             if (post == null) {
                 Toast.makeText(this@PostDetailActivity, "Post not found", Toast.LENGTH_SHORT).show()
                 finish()
@@ -165,6 +171,16 @@ class PostDetailActivity : BaseThemedActivity(), GifPickerBottomSheet.Listener {
             binding.detailTitle.text = post.title
             binding.detailBody.text = post.body
             binding.detailCategory.text = post.category
+            binding.detailCategory.isClickable = true
+            binding.detailCategory.setOnClickListener {
+                startActivity(
+                    Intent(this@PostDetailActivity, MainActivity::class.java).apply {
+                        putExtra(MainActivity.EXTRA_FEED_CATEGORY, post.category)
+                        flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                    }
+                )
+                finish()
+            }
             binding.detailLikeCount.text = post.likeCount.toString()
             val liked = FirebaseHelper.hasLikedPost(post.id)
             binding.detailLikeIcon.alpha = if (liked) 1f else 0.45f

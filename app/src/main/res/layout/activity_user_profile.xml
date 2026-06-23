@@ -155,6 +155,16 @@
                     layout="@layout/profile_chess_panel" />
 
                 <com.google.android.material.button.MaterialButton
+                    android:id="@+id/blockUserBtn"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="@string/block_user"
+                    android:textAllCaps="false"
+                    android:visibility="gone"
+                    style="@style/Widget.Material3.Button.OutlinedButton" />
+
+                <com.google.android.material.button.MaterialButton
                     android:id="@+id/editProfileBtn"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"

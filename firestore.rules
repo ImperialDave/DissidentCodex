@@ -1,6 +1,6 @@
 rules_version = '2';
 // =============================================================================
-// CODEX FIRESTORE RULES  v2026-06-22
+// CODEX FIRESTORE RULES  v2026-06-23
 // CANONICAL FILE (open this one): ~/AndroidStudioProjects/Codex/firestore.rules
 // NOT the .grok/worktrees/... copy — that is a separate sandbox and is NOT what you paste.
 // Paste the ENTIRE file into Firebase Console → Firestore → Rules → Publish.
@@ -332,6 +332,15 @@ service cloud.firestore {
       match /favoriteCategories/{categoryId} {
         allow read: if secureClient();
         allow write: if secureClient() && request.auth.uid == userId;
+      }
+
+      match /blockedUsers/{blockedUid} {
+        allow read: if secureClient() && request.auth.uid == userId;
+        allow create: if secureClient() && request.auth.uid == userId &&
+          blockedUid != userId &&
+          request.resource.data.keys().hasOnly(['uid', 'displayName', 'blockedAt']) &&
+          request.resource.data.uid == blockedUid;
+        allow delete: if secureClient() && request.auth.uid == userId;
       }
 
       match /notifications/{notifId} {

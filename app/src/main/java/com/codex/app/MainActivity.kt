@@ -36,6 +36,7 @@ class MainActivity : BaseThemedActivity() {
     companion object {
         private const val TAG = "MainActivity"
         const val EXTRA_OPEN_PROFILE = "open_profile"
+        const val EXTRA_FEED_CATEGORY = "feed_category"
     }
 
     private lateinit var binding: ActivityMainBinding
@@ -62,11 +63,12 @@ class MainActivity : BaseThemedActivity() {
         setupNotificationBadge()
 
         if (savedInstanceState == null) {
-            if (intent.getBooleanExtra(EXTRA_OPEN_PROFILE, false)) {
-                binding.bottomNavigation.selectedItemId = R.id.nav_profile
-                loadFragment(ProfileFragment())
-            } else {
-                loadFragment(FeedFragment())
+            when {
+                intent.getBooleanExtra(EXTRA_OPEN_PROFILE, false) -> {
+                    binding.bottomNavigation.selectedItemId = R.id.nav_profile
+                    loadFragment(ProfileFragment())
+                }
+                else -> openFeedWithOptionalCategory(intent.getStringExtra(EXTRA_FEED_CATEGORY))
             }
         }
 
@@ -129,6 +131,24 @@ class MainActivity : BaseThemedActivity() {
                 else -> false
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        val category = intent.getStringExtra(EXTRA_FEED_CATEGORY)
+        if (!category.isNullOrBlank()) {
+            intent.removeExtra(EXTRA_FEED_CATEGORY)
+            binding.bottomNavigation.selectedItemId = R.id.nav_feed
+            openFeedWithOptionalCategory(category)
+        }
+    }
+
+    private fun openFeedWithOptionalCategory(category: String?) {
+        binding.bottomNavigation.selectedItemId = R.id.nav_feed
+        loadFragment(
+            if (!category.isNullOrBlank()) FeedFragment.newInstance(category) else FeedFragment()
+        )
     }
 
     private fun loadFragment(fragment: Fragment) {

@@ -28,6 +28,16 @@ class FeedFragment : Fragment() {
 
     private lateinit var postAdapter: PostAdapter
     private var currentCategory: String = FirebaseHelper.ALL_CATEGORY_LABEL
+
+    companion object {
+        private const val ARG_CATEGORY = "category"
+
+        fun newInstance(category: String): FeedFragment {
+            return FeedFragment().apply {
+                arguments = Bundle().apply { putString(ARG_CATEGORY, category) }
+            }
+        }
+    }
     private var categoryNames: List<String> = listOf(FirebaseHelper.ALL_CATEGORY_LABEL)
     private var feedHiddenTopicNames: Set<String> = emptySet()
     private var allPosts: List<Post> = emptyList()
@@ -39,6 +49,9 @@ class FeedFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        arguments?.getString(ARG_CATEGORY)?.takeIf { it.isNotBlank() }?.let {
+            currentCategory = it
+        }
         setupRecycler()
         setupSearch()
         binding.swipeRefresh.setOnRefreshListener { refreshFeed() }

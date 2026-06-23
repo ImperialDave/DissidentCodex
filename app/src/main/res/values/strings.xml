@@ -335,6 +335,12 @@
     <string name="accept">Accept</string>
     <string name="decline">Decline</string>
     <string name="message_user">Message</string>
+    <string name="block_user">Block</string>
+    <string name="unblock_user">Unblock</string>
+    <string name="user_blocked_banner">You have blocked this user. Their posts and comments are hidden from you.</string>
+    <string name="block_user_confirm">Block %1$s? They won\'t be able to message you or appear in your feed.</string>
+    <string name="user_blocked_toast">User blocked</string>
+    <string name="user_unblocked_toast">User unblocked</string>
     <string name="edit_profile">Edit profile</string>
     <string name="recent_posts">Recent posts</string>
     <string name="no_posts_user">No posts yet</string>

@@ -34,6 +34,7 @@ class UserProfileActivity : BaseThemedActivity() {
     private var currentChessGame: ChessGame? = null
     private var isFriendsWithTarget = false
     private var canShowChessPanel = false
+    private var isBlockedUser = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -52,6 +53,7 @@ class UserProfileActivity : BaseThemedActivity() {
         setupPostsRecycler()
         binding.messageBtn.setOnClickListener { openDm() }
         binding.friendActionBtn.setOnClickListener { handleFriendAction() }
+        binding.blockUserBtn.setOnClickListener { handleBlockAction() }
         binding.editProfileBtn.setOnClickListener {
             startActivity(Intent(this, MainActivity::class.java).putExtra(MainActivity.EXTRA_OPEN_PROFILE, true))
             finish()
@@ -115,6 +117,8 @@ class UserProfileActivity : BaseThemedActivity() {
             }
             targetUser = user
             bindUser(user)
+            isBlockedUser = FirebaseHelper.isBlocked(uid)
+            bindBlockState(uid)
             bindFriendActions(uid)
             bindFavorites(uid)
             loadPosts(uid)
@@ -178,8 +182,36 @@ class UserProfileActivity : BaseThemedActivity() {
         }
     }
 
+    private fun bindBlockState(uid: String) {
+        val myUid = FirebaseHelper.getCurrentFirebaseUser()?.uid
+        val isSelf = myUid == uid
+        binding.blockUserBtn.visibility = if (isSelf) View.GONE else View.VISIBLE
+        if (isSelf) return
+
+        binding.blockUserBtn.text = getString(
+            if (isBlockedUser) R.string.unblock_user else R.string.block_user
+        )
+        if (isBlockedUser) {
+            binding.statusBanner.visibility = View.VISIBLE
+            binding.statusBanner.text = getString(R.string.user_blocked_banner)
+            binding.friendActionBtn.isEnabled = false
+            binding.messageBtn.isEnabled = false
+            binding.chessPanelInclude.chessPanel.visibility = View.GONE
+        } else if (targetUser?.isBanned() != true && targetUser?.isSuspended() != true) {
+            binding.statusBanner.visibility = View.GONE
+        }
+    }
+
     private fun bindFriendActions(uid: String) {
         lifecycleScope.launch {
+            if (isBlockedUser) {
+                binding.friendActionBtn.visibility = View.GONE
+                binding.messageBtn.visibility = View.GONE
+                binding.chessPanelInclude.chessPanel.visibility = View.GONE
+                return@launch
+            }
+            binding.friendActionBtn.visibility = View.VISIBLE
+            binding.messageBtn.visibility = View.VISIBLE
             val status = FirebaseHelper.getFriendshipStatus(uid)
             isFriendsWithTarget = status == FirebaseHelper.FriendshipStatus.FRIENDS
             canShowChessPanel = status != FirebaseHelper.FriendshipStatus.SELF &&
@@ -427,6 +459,50 @@ class UserProfileActivity : BaseThemedActivity() {
                     },
                     Toast.LENGTH_SHORT
                 ).show()
+            } else {
+                Toast.makeText(
+                    this@UserProfileActivity,
+                    res.exceptionOrNull()?.message ?: getString(R.string.error_generic),
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+    }
+
+    private fun handleBlockAction() {
+        val uid = targetUserId ?: return
+        val name = targetUser?.displayName?.ifBlank { "this user" } ?: "this user"
+        lifecycleScope.launch {
+            if (!isBlockedUser) {
+                androidx.appcompat.app.AlertDialog.Builder(this@UserProfileActivity)
+                    .setMessage(getString(R.string.block_user_confirm, name))
+                    .setPositiveButton(R.string.block_user) { _, _ -> performBlockToggle(uid) }
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show()
+            } else {
+                performBlockToggle(uid)
+            }
+        }
+    }
+
+    private fun performBlockToggle(uid: String) {
+        lifecycleScope.launch {
+            val wasBlocked = isBlockedUser
+            val res = if (wasBlocked) {
+                FirebaseHelper.unblockUser(uid)
+            } else {
+                FirebaseHelper.blockUser(uid)
+            }
+            if (res.isSuccess) {
+                isBlockedUser = !wasBlocked
+                Toast.makeText(
+                    this@UserProfileActivity,
+                    getString(if (wasBlocked) R.string.user_unblocked_toast else R.string.user_blocked_toast),
+                    Toast.LENGTH_SHORT
+                ).show()
+                bindBlockState(uid)
+                bindFriendActions(uid)
+                loadPosts(uid)
             } else {
                 Toast.makeText(
                     this@UserProfileActivity,
