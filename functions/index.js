@@ -2,6 +2,7 @@ const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { onDocumentUpdated, onDocumentCreated } = require('firebase-functions/v2/firestore');
 const { initializeApp } = require('firebase-admin/app');
 const { getFirestore, FieldValue, Timestamp } = require('firebase-admin/firestore');
+const { AccessToken, RoomServiceClient } = require('livekit-server-sdk');
 
 initializeApp();
 const db = getFirestore();
@@ -370,4 +371,221 @@ exports.onCommentCreated = onDocumentCreated('comments/{commentId}', async (even
     targetId: postId,
   });
   await pruneOldNotifications(postAuthorId);
+});
+
+// --- Voice (LiveKit Cloud) ---
+
+const VOICE_MAX_TOPIC = 25;
+const VOICE_MAX_GROUP = 25;
+
+function getLiveKitConfig() {
+  const apiKey = process.env.LIVEKIT_API_KEY;
+  const apiSecret = process.env.LIVEKIT_API_SECRET;
+  const url = process.env.LIVEKIT_URL;
+  if (!apiKey || !apiSecret || !url) {
+    throw new HttpsError(
+      'failed-precondition',
+      'LiveKit is not configured. Set LIVEKIT_API_KEY, LIVEKIT_API_SECRET, and LIVEKIT_URL.'
+    );
+  }
+  return { apiKey, apiSecret, url };
+}
+
+function parseDmMemberIds(roomId, uid) {
+  if (!roomId.startsWith('dm_')) return null;
+  const parts = roomId.slice(3).split('_').filter(Boolean);
+  if (parts.length !== 2 || !parts.includes(uid)) return null;
+  return parts;
+}
+
+async function fetchUserRole(uid) {
+  const snap = await db.collection('users').doc(uid).get();
+  if (!snap.exists) return 'USER';
+  return String(snap.data().role || 'USER').toUpperCase();
+}
+
+function isModeratorRole(role) {
+  return role === 'MOD' || role === 'ADMIN' || role === 'FOUNDER';
+}
+
+async function assertVoiceRoomAccess(uid, chatRoomId) {
+  const snap = await db.collection('chatRooms').doc(chatRoomId).get();
+  if (!snap.exists) {
+    throw new HttpsError('not-found', 'Chat room not found.');
+  }
+  const room = snap.data();
+  const role = await fetchUserRole(uid);
+
+  if (room.voiceLocked === true && !isModeratorRole(role)) {
+    throw new HttpsError('permission-denied', 'Voice is locked in this room.');
+  }
+
+  if (room.type === 'topic') {
+    return { room, voiceType: 'topic' };
+  }
+  if (room.type === 'dm') {
+    const members = room.memberIds || [];
+    if (members.includes(uid) || parseDmMemberIds(chatRoomId, uid)) {
+      return { room, voiceType: 'dm' };
+    }
+    throw new HttpsError('permission-denied', 'Not a participant in this conversation.');
+  }
+  if (room.type === 'group') {
+    if ((room.memberIds || []).includes(uid)) {
+      return { room, voiceType: 'group' };
+    }
+    throw new HttpsError('permission-denied', 'Not a member of this group.');
+  }
+  throw new HttpsError('invalid-argument', 'Unsupported room type for voice.');
+}
+
+async function loadVoiceSession(sessionId) {
+  const snap = await db.collection('voiceSessions').doc(sessionId).get();
+  if (!snap.exists) {
+    throw new HttpsError('not-found', 'Voice session not found.');
+  }
+  return { id: snap.id, ...snap.data() };
+}
+
+function isVoiceParticipant(session, uid) {
+  const participants = session.participants || {};
+  return uid in participants || session.createdBy === uid || session.calleeUid === uid;
+}
+
+exports.createVoiceToken = onCall({ cors: true }, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'Sign in required.');
+  }
+
+  const uid = request.auth.uid;
+  const sessionId = String(request.data?.sessionId || '').trim();
+  if (!sessionId) {
+    throw new HttpsError('invalid-argument', 'sessionId is required.');
+  }
+
+  const session = await loadVoiceSession(sessionId);
+  if (session.status === 'ended') {
+    throw new HttpsError('failed-precondition', 'This voice session has ended.');
+  }
+  if (!isVoiceParticipant(session, uid)) {
+    const { voiceType } = await assertVoiceRoomAccess(uid, session.chatRoomId);
+    if (voiceType === 'dm') {
+      throw new HttpsError('permission-denied', 'You are not part of this call.');
+    }
+  } else {
+    await assertVoiceRoomAccess(uid, session.chatRoomId);
+  }
+
+  const displayName = String(request.data?.displayName || 'User').trim().slice(0, 50) || 'User';
+  const { apiKey, apiSecret, url } = getLiveKitConfig();
+  const roomName = session.livekitRoom || session.chatRoomId;
+
+  const at = new AccessToken(apiKey, apiSecret, {
+    identity: uid,
+    name: displayName,
+    ttl: '1h',
+  });
+  at.addGrant({
+    roomJoin: true,
+    room: roomName,
+    canPublish: true,
+    canSubscribe: true,
+    canPublishData: true,
+    canPublishSources: ['microphone'],
+  });
+
+  return {
+    token: await at.toJwt(),
+    url,
+    roomName,
+  };
+});
+
+exports.endVoiceSession = onCall({ cors: true }, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'Sign in required.');
+  }
+
+  const uid = request.auth.uid;
+  const sessionId = String(request.data?.sessionId || '').trim();
+  if (!sessionId) {
+    throw new HttpsError('invalid-argument', 'sessionId is required.');
+  }
+
+  const session = await loadVoiceSession(sessionId);
+  await assertVoiceRoomAccess(uid, session.chatRoomId);
+
+  const role = await fetchUserRole(uid);
+  const canEnd =
+    session.createdBy === uid ||
+    session.calleeUid === uid ||
+    isVoiceParticipant(session, uid) ||
+    isModeratorRole(role);
+
+  if (!canEnd) {
+    throw new HttpsError('permission-denied', 'Cannot end this session.');
+  }
+
+  const { apiKey, apiSecret, url } = getLiveKitConfig();
+  const roomName = session.livekitRoom || session.chatRoomId;
+
+  try {
+    const roomClient = new RoomServiceClient(url.replace('wss://', 'https://'), apiKey, apiSecret);
+    await roomClient.deleteRoom(roomName);
+  } catch (err) {
+    console.warn('LiveKit deleteRoom (may already be empty)', err?.message || err);
+  }
+
+  await db.collection('voiceSessions').doc(sessionId).update({
+    status: 'ended',
+    endedAt: Timestamp.now(),
+    endedBy: uid,
+  });
+
+  await db.collection('chatRooms').doc(session.chatRoomId).update({
+    activeVoiceSessionId: FieldValue.delete(),
+  }).catch(() => {});
+
+  return { ok: true };
+});
+
+exports.removeVoiceParticipant = onCall({ cors: true }, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'Sign in required.');
+  }
+
+  const uid = request.auth.uid;
+  const sessionId = String(request.data?.sessionId || '').trim();
+  const targetUid = String(request.data?.targetUid || '').trim();
+  if (!sessionId || !targetUid) {
+    throw new HttpsError('invalid-argument', 'sessionId and targetUid are required.');
+  }
+
+  const role = await fetchUserRole(uid);
+  const session = await loadVoiceSession(sessionId);
+  const { voiceType } = await assertVoiceRoomAccess(uid, session.chatRoomId);
+
+  const canKick =
+    isModeratorRole(role) ||
+    (voiceType === 'group' && session.createdBy === uid);
+
+  if (!canKick) {
+    throw new HttpsError('permission-denied', 'No permission to remove participants.');
+  }
+
+  const { apiKey, apiSecret, url } = getLiveKitConfig();
+  const roomName = session.livekitRoom || session.chatRoomId;
+  const roomClient = new RoomServiceClient(url.replace('wss://', 'https://'), apiKey, apiSecret);
+
+  try {
+    await roomClient.removeParticipant(roomName, targetUid);
+  } catch (err) {
+    console.warn('removeParticipant', err?.message || err);
+  }
+
+  await db.collection('voiceSessions').doc(sessionId).update({
+    [`participants.${targetUid}.leftAt`]: Timestamp.now(),
+  });
+
+  return { ok: true };
 });
