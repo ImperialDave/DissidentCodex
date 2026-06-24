@@ -213,8 +213,13 @@ class FounderToolsActivity : BaseThemedActivity() {
 
     private fun loadPosts() {
         lifecycleScope.launch {
-            allPosts = FirebaseHelper.getPosts(null, 200)
-            refreshPostList()
+            FirebaseHelper.getPosts(null, 200)
+                .onSuccess { allPosts = it; refreshPostList() }
+                .onFailure { err ->
+                    allPosts = emptyList()
+                    refreshPostList()
+                    Toast.makeText(this@FounderToolsActivity, err.message ?: "Failed to load posts", Toast.LENGTH_LONG).show()
+                }
         }
     }
 
