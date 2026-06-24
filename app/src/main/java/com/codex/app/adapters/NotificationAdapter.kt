@@ -10,7 +10,8 @@ import com.codex.app.databinding.ItemNotificationBinding
 import com.codex.app.models.AppNotification
 
 class NotificationAdapter(
-    private val onClick: (AppNotification) -> Unit
+    private val onClick: (AppNotification) -> Unit,
+    private val onDelete: (AppNotification) -> Unit
 ) : RecyclerView.Adapter<NotificationAdapter.VH>() {
 
     private var items: List<AppNotification> = emptyList()
@@ -48,6 +49,9 @@ class NotificationAdapter(
                 ""
             }
             b.root.setOnClickListener { onClick(item) }
+            b.deleteBtn.setOnClickListener {
+                onDelete(item)
+            }
         }
 
         private fun iconFor(type: String): Int = when (type) {
