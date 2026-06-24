@@ -99,4 +99,36 @@ object NotificationHelper {
             Result.failure(e)
         }
     }
+
+    suspend fun deleteNotification(notificationId: String): Result<Unit> {
+        val uid = FirebaseHelper.getCurrentFirebaseUser()?.uid
+            ?: return Result.failure(Exception("Sign in required"))
+        return try {
+            notifsRef(uid).document(notificationId).delete().await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "deleteNotification error", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun clearAllNotifications(): Result<Unit> {
+        val uid = FirebaseHelper.getCurrentFirebaseUser()?.uid
+            ?: return Result.failure(Exception("Sign in required"))
+        return try {
+            val snap = notifsRef(uid)
+                .orderBy("createdAt", Query.Direction.DESCENDING)
+                .limit(50)
+                .get()
+                .await()
+            if (snap.isEmpty) return Result.success(Unit)
+            val batch = db.batch()
+            snap.documents.forEach { doc -> batch.delete(doc.reference) }
+            batch.commit().await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "clearAllNotifications error", e)
+            Result.failure(e)
+        }
+    }
 }
