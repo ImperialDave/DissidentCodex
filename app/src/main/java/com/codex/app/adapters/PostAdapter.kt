@@ -22,7 +22,8 @@ class PostAdapter(
     private val onCategoryClick: ((String) -> Unit)? = null,
     private val onAuthorClick: ((Post) -> Unit)? = null,
     private val likedPostIds: () -> Set<String> = { emptySet() },
-    private val onHideClick: ((Post) -> Unit)? = null
+    private val onHideClick: ((Post) -> Unit)? = null,
+    private val communityPostIds: () -> Set<String> = { emptySet() }
 ) : RecyclerView.Adapter<PostAdapter.PostViewHolder>() {
 
     private var posts: List<Post> = emptyList()
@@ -98,6 +99,9 @@ class PostAdapter(
             val canDelete = role.canModerate() || post.authorId == FirebaseHelper.getCurrentFirebaseUser()?.uid
             binding.deleteButton.visibility = if (canDelete) View.VISIBLE else View.GONE
             binding.deleteButton.setOnClickListener { onDeleteClick(post) }
+
+            val isCommunity = communityPostIds().contains(post.id)
+            binding.communityBadge.visibility = if (isCommunity) View.VISIBLE else View.GONE
 
             val canModerate = role.canModerate()
             if (canModerate && onHideClick != null) {
