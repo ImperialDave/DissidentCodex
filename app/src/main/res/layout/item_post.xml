@@ -83,6 +83,23 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/categoryChip" />
 
+        <TextView
+            android:id="@+id/communityBadge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="6dp"
+            android:background="@color/accent_light"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="3dp"
+            android:text="@string/feed_community_badge"
+            android:textColor="@color/accent"
+            android:textSize="10sp"
+            android:textStyle="bold"
+            android:visibility="gone"
+            app:layout_constraintStart_toEndOf="@id/hiddenBadge"
+            app:layout_constraintTop_toBottomOf="@id/categoryChip" />
+
         <!-- Title -->
         <TextView
             android:id="@+id/postTitle"
