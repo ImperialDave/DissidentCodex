@@ -28,18 +28,7 @@ class FeedFragment : Fragment() {
 
     private lateinit var postAdapter: PostAdapter
     private var currentCategory: String = FirebaseHelper.ALL_CATEGORY_LABEL
-
-    companion object {
-        private const val ARG_CATEGORY = "category"
-
-        fun newInstance(category: String): FeedFragment {
-            return FeedFragment().apply {
-                arguments = Bundle().apply { putString(ARG_CATEGORY, category) }
-            }
-        }
-    }
     private var categoryNames: List<String> = listOf(FirebaseHelper.ALL_CATEGORY_LABEL)
-    private var feedHiddenTopicNames: Set<String> = emptySet()
     private var allPosts: List<Post> = emptyList()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
@@ -49,9 +38,6 @@ class FeedFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        arguments?.getString(ARG_CATEGORY)?.takeIf { it.isNotBlank() }?.let {
-            currentCategory = it
-        }
         setupRecycler()
         setupSearch()
         binding.swipeRefresh.setOnRefreshListener { refreshFeed() }
@@ -68,13 +54,7 @@ class FeedFragment : Fragment() {
 
     private fun refreshFeed() {
         viewLifecycleOwner.lifecycleScope.launch {
-            val modView = FirebaseHelper.resolveRole(FirebaseHelper.currentUser).canModerate()
-            categoryNames = FirebaseHelper.getFeedCategoryNames(includeFeedHidden = modView)
-            feedHiddenTopicNames = if (modView) {
-                FirebaseHelper.getFeedHiddenTopicNames()
-            } else {
-                emptySet()
-            }
+            categoryNames = FirebaseHelper.getFeedCategoryNames()
             if (!isAdded) return@launch
             if (!categoryNames.contains(currentCategory)) {
                 currentCategory = FirebaseHelper.ALL_CATEGORY_LABEL
@@ -88,17 +68,10 @@ class FeedFragment : Fragment() {
         val group = _binding?.categoryChips ?: return
         group.removeAllViews()
         categoryNames.forEach { cat ->
-            val feedHidden = cat != FirebaseHelper.ALL_CATEGORY_LABEL &&
-                feedHiddenTopicNames.contains(cat.lowercase())
             val chip = Chip(requireContext()).apply {
-                text = if (feedHidden) cat + getString(R.string.feed_hidden_topic_marker) else cat
+                text = cat
                 isCheckable = true
                 isChecked = cat == currentCategory
-                if (feedHidden) {
-                    chipBackgroundColor = android.content.res.ColorStateList.valueOf(
-                        android.graphics.Color.parseColor("#33F97316")
-                    )
-                }
                 setOnClickListener {
                     currentCategory = cat
                     for (i in 0 until group.childCount) {
@@ -221,18 +194,26 @@ class FeedFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             FirebaseHelper.refreshLikedPostCache()
             val includeHidden = FirebaseHelper.resolveRole(FirebaseHelper.currentUser).canModerate()
-            allPosts = FirebaseHelper.getPosts(
+            val result = FirebaseHelper.getPosts(
                 category = if (currentCategory == FirebaseHelper.ALL_CATEGORY_LABEL) null else currentCategory,
                 includeHidden = includeHidden
             )
             if (!isAdded) return@launch
-            applyFeedFilter()
             val feedBinding = _binding ?: return@launch
-            if (allPosts.isEmpty()) {
-                feedBinding.emptyText.text = getString(R.string.no_posts) + "\nTap here to create the first post!"
-                feedBinding.emptyText.setOnClickListener {
-                    (activity as? MainActivity)?.findViewById<BottomNavigationView>(R.id.bottomNavigation)?.selectedItemId = R.id.nav_create
+            result.onSuccess { posts ->
+                allPosts = posts
+                applyFeedFilter()
+                if (allPosts.isEmpty()) {
+                    feedBinding.emptyText.text = getString(R.string.no_posts) + "\nTap here to create the first post!"
+                    feedBinding.emptyText.setOnClickListener {
+                        (activity as? MainActivity)?.findViewById<BottomNavigationView>(R.id.bottomNavigation)?.selectedItemId = R.id.nav_create
+                    }
                 }
+            }.onFailure { err ->
+                allPosts = emptyList()
+                applyFeedFilter()
+                feedBinding.emptyText.text = err.message ?: getString(R.string.no_posts)
+                Toast.makeText(requireContext(), err.message ?: "Failed to load feed", Toast.LENGTH_LONG).show()
             }
             _binding?.swipeRefresh?.isRefreshing = false
         }
