@@ -6,9 +6,11 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.codex.app.R
 import com.codex.app.databinding.FragmentNotificationsBinding
 import com.codex.app.adapters.NotificationAdapter
 import com.codex.app.models.AppNotification
@@ -35,9 +37,14 @@ class NotificationsFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        adapter = NotificationAdapter { notif -> openNotification(notif) }
+        adapter = NotificationAdapter(
+            onClick = { notif -> openNotification(notif) },
+            onDelete = { notif -> deleteNotification(notif) }
+        )
         binding.notificationsRecycler.layoutManager = LinearLayoutManager(requireContext())
         binding.notificationsRecycler.adapter = adapter
+
+        binding.clearAllBtn.setOnClickListener { confirmClearAll() }
 
         binding.markAllReadBtn.setOnClickListener {
             lifecycleScope.launch {
@@ -75,6 +82,38 @@ class NotificationsFragment : Fragment() {
         listener?.remove()
         listener = null
         super.onStop()
+    }
+
+    private fun deleteNotification(notif: AppNotification) {
+        lifecycleScope.launch {
+            val res = NotificationHelper.deleteNotification(notif.id)
+            if (res.isFailure) {
+                Toast.makeText(
+                    requireContext(),
+                    res.exceptionOrNull()?.message ?: getString(R.string.error_generic),
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+    }
+
+    private fun confirmClearAll() {
+        AlertDialog.Builder(requireContext())
+            .setMessage(R.string.clear_all_notifications_confirm)
+            .setPositiveButton(R.string.clear_all_notifications) { _, _ ->
+                lifecycleScope.launch {
+                    val res = NotificationHelper.clearAllNotifications()
+                    if (res.isFailure) {
+                        Toast.makeText(
+                            requireContext(),
+                            res.exceptionOrNull()?.message ?: getString(R.string.error_generic),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     private fun openNotification(notif: AppNotification) {
