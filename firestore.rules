@@ -4,8 +4,9 @@ rules_version = '2';
 // CANONICAL FILE (open this one): ~/AndroidStudioProjects/Codex/firestore.rules
 // NOT the .grok/worktrees/... copy — that is a separate sandbox and is NOT what you paste.
 // Paste the ENTIRE file into Firebase Console → Firestore → Rules → Publish.
-// After pasting, search the editor for "v2026-06-25" — if missing, paste failed.
+// After pasting, search the editor for "voiceSessions" — if missing, paste failed.
 //
+// v2026-06-24-voice: voiceSessions, group chatRooms, voiceLocked, activeVoiceSessionId.
 // v2026-06-25: feedHiddenTopics collection (fixes feed/topics permission-denied for logged-in users).
 // v2026-06-24: blockedUsers subcollection rules (fixes feed permission-denied for logged-in users).
 // v2026-06-23: case-insensitive authorRole, default USER when role field missing.
@@ -79,6 +80,7 @@ service cloud.firestore {
 
     function isRoomWritable(room) {
       return room.type == 'dm' ||
+        room.type == 'group' ||
         (room.type == 'topic' && (
           !('locked' in room) || room.locked != true || isModerator()
         ));
@@ -95,7 +97,12 @@ service cloud.firestore {
         (room.type == 'dm' && (
           request.auth.uid in room.memberIds ||
           room.createdBy == request.auth.uid
-        ));
+        )) ||
+        (room.type == 'group' && request.auth.uid in room.memberIds);
+    }
+
+    function isGroupRoomId(roomId) {
+      return roomId.matches('group_.+');
     }
 
     // Allow get() on missing docs for known room id patterns so clients can
@@ -105,9 +112,61 @@ service cloud.firestore {
     }
 
     function canReadChatRoom(roomId, room) {
-      return (resource == null && (isTopicRoomId(roomId) || isDmParticipantByRoomId(roomId))) ||
+      return (resource == null && (isTopicRoomId(roomId) || isDmParticipantByRoomId(roomId) || isGroupRoomId(roomId))) ||
         canAccessChatRoom(room) ||
         (room.type == 'dm' && isDmParticipantByRoomId(roomId));
+    }
+
+    function canAccessVoiceSession(session) {
+      return chatRoomExists(session.chatRoomId) &&
+        canReadChatRoom(session.chatRoomId, chatRoomData(session.chatRoomId));
+    }
+
+    function validVoiceSessionCreate() {
+      let data = request.resource.data;
+      return data.createdBy == request.auth.uid &&
+        data.chatRoomId is string &&
+        data.chatRoomId.size() >= 1 &&
+        data.voiceType in ['dm', 'topic', 'group'] &&
+        data.livekitRoom is string &&
+        data.livekitRoom.size() >= 1 &&
+        data.status in ['ringing', 'active'] &&
+        data.maxParticipants is int &&
+        data.maxParticipants >= 2 &&
+        data.maxParticipants <= 25 &&
+        canAccessVoiceSession(data) &&
+        (
+          (data.voiceType == 'dm' && data.status == 'ringing' && data.calleeUid is string) ||
+          (data.voiceType == 'topic' && data.status == 'active') ||
+          (data.voiceType == 'group' && data.status == 'active')
+        );
+    }
+
+    function validVoiceSessionUpdate() {
+      let data = request.resource.data;
+      let prev = resource.data;
+      return canAccessVoiceSession(prev) && (
+        (prev.status == 'ringing' &&
+          prev.calleeUid == request.auth.uid &&
+          data.status == 'active' &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status', 'participants', 'startedAt'
+          ])) ||
+        (prev.status == 'ringing' &&
+          (prev.calleeUid == request.auth.uid || prev.createdBy == request.auth.uid) &&
+          data.status == 'ended' &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status', 'endedAt', 'endedBy', 'participants'
+          ])) ||
+        (prev.status == 'active' &&
+          data.status == 'ended' &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'status', 'endedAt', 'endedBy', 'participants'
+          ])) ||
+        (prev.status == 'active' &&
+          data.status == 'active' &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['participants']))
+      );
     }
 
     function chatRoomExists(roomId) {
@@ -461,6 +520,10 @@ service cloud.firestore {
             request.resource.data.topicId.size() >= 1) ||
           (request.resource.data.type == 'dm' &&
             request.resource.data.memberIds.size() == 2 &&
+            request.auth.uid in request.resource.data.memberIds) ||
+          (request.resource.data.type == 'group' &&
+            request.resource.data.memberIds.size() >= 2 &&
+            request.resource.data.memberIds.size() <= 25 &&
             request.auth.uid in request.resource.data.memberIds)
         );
     }
@@ -547,9 +610,12 @@ service cloud.firestore {
       allow update: if secureClient() && (
         (isModerator() && resource.data.type == 'topic' &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'locked', 'lockedBy', 'lockedAt',
-            'lastMessageAt', 'lastMessagePreview', 'lastMessageAuthorId', 'messageCount'
+            'locked', 'lockedBy', 'lockedAt', 'voiceLocked',
+            'lastMessageAt', 'lastMessagePreview', 'lastMessageAuthorId', 'messageCount',
+            'activeVoiceSessionId'
           ])) ||
+        (isModerator() && resource.data.type in ['topic', 'group'] &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['voiceLocked', 'activeVoiceSessionId'])) ||
         (resource.data.type == 'dm' &&
           isDmParticipantByRoomId(roomId) &&
           request.auth.uid in request.resource.data.memberIds &&
@@ -557,7 +623,8 @@ service cloud.firestore {
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberIds'])) ||
         (canReadChatRoom(roomId, resource.data) &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'lastMessageAt', 'lastMessagePreview', 'lastMessageAuthorId', 'messageCount'
+            'lastMessageAt', 'lastMessagePreview', 'lastMessageAuthorId', 'messageCount',
+            'activeVoiceSessionId'
           ]))
       );
       allow delete: if isModerator();
@@ -573,6 +640,13 @@ service cloud.firestore {
           resource.data.authorId == request.auth.uid || isModerator()
         );
       }
+    }
+
+    match /voiceSessions/{sessionId} {
+      allow read: if secureClient() && canAccessVoiceSession(resource.data);
+      allow create: if secureClient() && validVoiceSessionCreate();
+      allow update: if secureClient() && validVoiceSessionUpdate();
+      allow delete: if false;
     }
   }
 }
