@@ -4,8 +4,9 @@ rules_version = '2';
 // CANONICAL FILE (open this one): ~/AndroidStudioProjects/Codex/firestore.rules
 // NOT the .grok/worktrees/... copy — that is a separate sandbox and is NOT what you paste.
 // Paste the ENTIRE file into Firebase Console → Firestore → Rules → Publish.
-// After pasting, search the editor for "v2026-06-22" — if missing, paste failed.
+// After pasting, search the editor for "v2026-06-25" — if missing, paste failed.
 //
+// v2026-06-25: feedHiddenTopics collection (fixes feed/topics permission-denied for logged-in users).
 // v2026-06-24: blockedUsers subcollection rules (fixes feed permission-denied for logged-in users).
 // v2026-06-23: case-insensitive authorRole, default USER when role field missing.
 // v2026-06-22: fix mod post hide (no canPostContent gate), comment video, web App Check,
@@ -411,6 +412,11 @@ service cloud.firestore {
     }
 
     match /hiddenTopics/{topicKey} {
+      allow read: if secureClient();
+      allow write, delete: if isModerator();
+    }
+
+    match /feedHiddenTopics/{topicKey} {
       allow read: if secureClient();
       allow write, delete: if isModerator();
     }
