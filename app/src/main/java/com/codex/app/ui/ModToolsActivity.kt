@@ -318,8 +318,13 @@ class ModToolsActivity : BaseThemedActivity() {
 
     private fun loadPosts() {
         lifecycleScope.launch {
-            allPosts = FirebaseHelper.getPosts(null, 100, includeHidden = true)
-            refreshPostList()
+            FirebaseHelper.getPosts(null, 100, includeHidden = true)
+                .onSuccess { allPosts = it; refreshPostList() }
+                .onFailure { err ->
+                    allPosts = emptyList()
+                    refreshPostList()
+                    Toast.makeText(this@ModToolsActivity, err.message ?: "Failed to load posts", Toast.LENGTH_LONG).show()
+                }
         }
     }
 
