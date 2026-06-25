@@ -7,6 +7,7 @@ rules_version = '2';
 // After pasting, search the editor for "voiceSessions" — if missing, paste failed.
 //
 // v2026-06-24-voice: voiceSessions, group chatRooms, voiceLocked, activeVoiceSessionId.
+// v2026-06-25-voice-dm: DM voiceSessions read/create via isDmParticipantByRoomId room-id fallback.
 // v2026-06-25: feedHiddenTopics collection (fixes feed/topics permission-denied for logged-in users).
 // v2026-06-24: blockedUsers subcollection rules (fixes feed permission-denied for logged-in users).
 // v2026-06-23: case-insensitive authorRole, default USER when role field missing.
@@ -119,12 +120,18 @@ service cloud.firestore {
 
     function canAccessVoiceSession(session) {
       return chatRoomExists(session.chatRoomId) &&
-        canReadChatRoom(session.chatRoomId, chatRoomData(session.chatRoomId));
+        (
+          canReadChatRoom(session.chatRoomId, chatRoomData(session.chatRoomId)) ||
+          isDmParticipantByRoomId(session.chatRoomId)
+        );
     }
 
     function canReadVoiceSession(session) {
       return session.createdBy == request.auth.uid ||
         session.calleeUid == request.auth.uid ||
+        (session.voiceType == 'dm' &&
+          session.chatRoomId is string &&
+          isDmParticipantByRoomId(session.chatRoomId)) ||
         (session.voiceType in ['topic', 'group'] && canAccessVoiceSession(session));
     }
 
