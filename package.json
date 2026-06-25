@@ -3,12 +3,13 @@
     "web:dev": "npm --prefix codex-web run dev",
     "web:build": "npm --prefix codex-web run build",
     "web:start": "npm --prefix codex-web run start",
-    "web:package": "bash scripts/build-codex-web-deploy.sh",
     "firebase": "bash scripts/firebase-with-auth.sh",
     "firebase:help": "bash scripts/firebase-login-fix.sh",
     "deploy:rules": "bash scripts/firebase-with-auth.sh deploy --only firestore:rules,storage --project dissidentcodex",
+    "deploy:indexes": "bash scripts/firebase-with-auth.sh deploy --only firestore:indexes --project dissidentcodex",
     "deploy:hosting": "bash scripts/firebase-with-auth.sh deploy --only hosting --project dissidentcodex",
-    "deploy:chess": "bash scripts/firebase-with-auth.sh deploy --only firestore:rules,functions:startChessGame --project dissidentcodex"
+    "deploy:chess": "bash scripts/firebase-with-auth.sh deploy --only firestore:rules,functions:startChessGame --project dissidentcodex",
+    "deploy:voice": "bash scripts/firebase-with-auth.sh deploy --only firestore:rules,firestore:indexes,functions:createVoiceToken,functions:endVoiceSession,functions:removeVoiceParticipant,functions:onVoiceSessionCreated,functions:onVoiceSessionUpdated --project dissidentcodex"
   },
   "devDependencies": {
     "firebase-tools": "^15.22.0"
