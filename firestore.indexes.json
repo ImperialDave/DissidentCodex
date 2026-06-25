@@ -1,0 +1,14 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "voiceSessions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "voiceType", "order": "ASCENDING" },
+        { "fieldPath": "calleeUid", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
