@@ -390,6 +390,14 @@ service cloud.firestore {
         allow delete: if secureClient() && request.auth.uid == userId;
       }
 
+      match /savedPosts/{postId} {
+        allow read: if secureClient() && request.auth.uid == userId;
+        allow create: if secureClient() && request.auth.uid == userId &&
+          canPostContent() &&
+          request.resource.data.keys().hasOnly(['savedAt']);
+        allow delete: if secureClient() && request.auth.uid == userId;
+      }
+
       match /likedComments/{commentId} {
         allow read: if secureClient() && request.auth.uid == userId;
         allow create: if secureClient() && request.auth.uid == userId &&
