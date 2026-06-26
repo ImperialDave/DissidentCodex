@@ -1,1 +1,1 @@
-// MCP connectivity test - will be replaced immediately
+PLACEHOLDER_WILL_BE_REPLACED
