@@ -1,1 +1,1 @@
-PLACEHOLDER_USE_LOCAL_FILE
+// MCP connectivity test - will be replaced immediately
