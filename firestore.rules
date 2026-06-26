@@ -549,16 +549,11 @@ service cloud.firestore {
         );
     }
 
-    function areFriends(uidA, uidB) {
-      return exists(/databases/$(database)/documents/users/$(uidA)/friends/$(uidB)) &&
-        exists(/databases/$(database)/documents/users/$(uidB)/friends/$(uidA));
-    }
-
     function isChessPlayer(data) {
       return request.auth.uid == data.whiteUid || request.auth.uid == data.blackUid;
     }
 
-    function canReadChessGame(gameId) {
+    function canReadChessGame() {
       return resource == null ||
         (resource.data.keys().hasAll(['playerUids']) &&
           request.auth.uid in resource.data.playerUids) ||
@@ -619,7 +614,7 @@ service cloud.firestore {
     }
 
     match /chessGames/{gameId} {
-      allow read: if secureClient() && canReadChessGame(gameId);
+      allow read: if secureClient() && canReadChessGame();
       allow create: if secureClient() && validChessCreate();
       allow update: if secureClient() && validChessUpdate();
       allow delete: if false;
