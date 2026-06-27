@@ -1,0 +1,1 @@
+LOAD_FROM_FILE:/tmp/cu_create_new.json
