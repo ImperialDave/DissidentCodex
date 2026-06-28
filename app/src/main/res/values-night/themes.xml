@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <!-- Palette selection is explicit via ThemeManager; keep night bucket aligned with default. -->
-    <style name="Theme.Codex" parent="Theme.Codex.Midnight" />
-</resources>
